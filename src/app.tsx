@@ -1,18 +1,50 @@
-import { useState } from 'preact/hooks'
-import preactLogo from './assets/preact.svg'
-import viteLogo from '/vite.svg'
-import './app.css'
-import MotionDetector from './comps/Motion'
+import { useState, useCallback } from "preact/hooks";
+import preactLogo from "./assets/preact.svg";
+import viteLogo from "/vite.svg";
+import "./app.css";
+import MotionDetector from "./comps/Motion";
+import { TelegramSettings } from "./components/TelegramSettings";
+import { useTelegram } from "./hooks/useTelegram";
 
 export function App() {
-  const [count, setCount] = useState(0)
-  const handleMotion = (timestamp, matrix) => {
-    console.log("Motion at", timestamp);
-    // maybe send to server, update state, etc.
-  };
+  const [count, setCount] = useState(0);
+  const {
+    telegramBotToken,
+    setTelegramBotToken,
+    telegramChatId,
+    sendTelegrams,
+    setSendTelegrams,
+    debounceTime,
+    setDebounceTime,
+    sendTelegramMessage,
+    handleStartChat,
+    botUsername,
+  } = useTelegram();
+
+  const handleMotion = useCallback(
+    (timestamp: Date, frame: string) => {
+      console.log("Motion detected!");
+      if (sendTelegrams) {
+        sendTelegramMessage(frame);
+      }
+    },
+    [sendTelegrams, sendTelegramMessage]
+  );
+
   return (
     <>
       <div>
+        <TelegramSettings
+          sendTelegrams={sendTelegrams}
+          setSendTelegrams={setSendTelegrams}
+          telegramBotToken={telegramBotToken}
+          setTelegramBotToken={setTelegramBotToken}
+          telegramChatId={telegramChatId}
+          debounceTime={debounceTime}
+          setDebounceTime={setDebounceTime}
+          onStartChat={handleStartChat}
+          botUsername={botUsername}
+        />
         <MotionDetector
           onMotion={handleMotion}
           diffThreshold={25}
@@ -36,7 +68,7 @@ export function App() {
         </p>
       </div>
       <p>
-        Check out{' '}
+        Check out{" "}
         <a
           href="https://preactjs.com/guide/v10/getting-started#create-a-vite-powered-preact-app"
           target="_blank"
@@ -49,5 +81,5 @@ export function App() {
         Click on the Vite and Preact logos to learn more
       </p>
     </>
-  )
+  );
 }
