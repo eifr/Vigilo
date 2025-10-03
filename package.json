@@ -11,7 +11,6 @@
   "dependencies": {
     "@techstark/opencv-js": "^4.11.0-release.1",
     "@types/qrcode.react": "^3.0.0",
-    "diffyjs": "^2.0.0",
     "preact": "^10.27.2",
     "qrcode.react": "^4.2.0"
   },
