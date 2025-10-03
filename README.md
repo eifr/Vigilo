@@ -1,8 +1,10 @@
-# Vigilo
+# 📸 Vigilo
 
-This is a portable security camera app built with Preact and Vite. It utilizes computer vision and image processing libraries to provide its core functionality.
+*"Vigilo"* is Latin for "I watch over," which perfectly describes this portable security camera app.
 
-## Installation
+Turn any device with a camera into a portable security system! 🛡️ This slick web app is built with Preact and Vite, leveraging powerful computer vision to keep an eye on things for you.
+
+## 🚀 Installation
 
 1.  Clone the repository:
     ```bash
@@ -21,7 +23,7 @@ This is a portable security camera app built with Preact and Vite. It utilizes c
     bun install
     ```
 
-## Available Scripts
+## 📜 Available Scripts
 
 In the project directory, you can run:
 
@@ -38,7 +40,7 @@ Builds the app for production to the `dist` folder. It correctly bundles Preact 
 
 Serves the production build locally to preview it before deploying.
 
-## Key Dependencies
+## 🔑 Key Dependencies
 
 - **Preact**: A fast 3kB alternative to React with the same modern API.
 - **Vite**: A modern frontend build tool that provides an extremely fast development environment.
