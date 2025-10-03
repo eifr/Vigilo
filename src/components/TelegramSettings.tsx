@@ -1,4 +1,3 @@
-import type { StateUpdater } from "preact/hooks";
 import { QRCodeCanvas } from "qrcode.react";
 
 interface TelegramSettingsProps {
