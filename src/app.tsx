@@ -2,7 +2,7 @@ import { useState, useCallback } from "preact/hooks";
 import preactLogo from "./assets/preact.svg";
 import viteLogo from "/vite.svg";
 import "./app.css";
-import MotionDetector from "./comps/Motion";
+import MotionDetector from "./components/Motion";
 import { TelegramSettings } from "./components/TelegramSettings";
 import { useTelegram } from "./hooks/useTelegram";
 
