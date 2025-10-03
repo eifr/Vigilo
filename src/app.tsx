@@ -22,7 +22,7 @@ export function App() {
   } = useTelegram();
 
   const handleMotion = useCallback(
-    (timestamp: Date, frame: string) => {
+    (_: Date, frame: string) => {
       console.log("Motion detected!");
       if (sendTelegrams) {
         sendTelegramMessage(frame);
