@@ -1,6 +1,6 @@
 # 📸 Vigilo
 
-*"Vigilo"* is Latin for "I watch over," which perfectly describes this portable security camera app.
+_"Vigilo"_ is Latin for "I watch over," which perfectly describes this portable security camera app.
 
 Turn any device with a camera into a portable security system! 🛡️ This slick web app is built with Preact and Vite, leveraging powerful computer vision to keep an eye on things for you.
 
@@ -45,5 +45,4 @@ Serves the production build locally to preview it before deploying.
 - **Preact**: A fast 3kB alternative to React with the same modern API.
 - **Vite**: A modern frontend build tool that provides an extremely fast development environment.
 - **OpenCV.js**: The JavaScript version of the OpenCV library for computer vision tasks.
-- **diffyjs**: A library for image comparison.
 - **qrcode.react**: A React component for generating QR codes.
