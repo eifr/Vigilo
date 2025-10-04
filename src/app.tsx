@@ -1,4 +1,4 @@
-import { useCallback } from "preact/hooks";
+import { useCallback, useState } from "preact/hooks";
 import "./app.css";
 import MotionDetector from "./components/Motion";
 import { TelegramSettings } from "./components/TelegramSettings";
@@ -17,6 +17,10 @@ export function App() {
     handleStartChat,
     botUsername,
   } = useTelegram();
+  const [cameras, setCameras] = useState<string[]>([]);
+  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>(
+    []
+  );
 
   const handleMotion = useCallback(
     (_: Date, frame: string) => {
@@ -27,6 +31,21 @@ export function App() {
     },
     [sendTelegrams, sendTelegramMessage]
   );
+
+  const handleAddCameraClick = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(
+      (device) => device.kind === "videoinput"
+    );
+    setAvailableDevices(videoDevices);
+  };
+
+  const addCamera = (deviceId: string) => {
+    if (!cameras.includes(deviceId)) {
+      setCameras([...cameras, deviceId]);
+    }
+    setAvailableDevices([]); // Hide list after selection
+  };
 
   return (
     <>
@@ -44,12 +63,30 @@ export function App() {
           onStartChat={handleStartChat}
           botUsername={botUsername}
         />
-        <MotionDetector
-          onMotion={handleMotion}
-          diffThreshold={25}
-          motionPixelRatio={0.01}
-          intervalMs={200}
-        />
+        <button onClick={handleAddCameraClick}>Add camera</button>
+        {availableDevices.length > 0 && (
+          <ul>
+            {availableDevices.map((device) => (
+              <li key={device.deviceId}>
+                <button onClick={() => addCamera(device.deviceId)}>
+                  {device.label || `Camera ${cameras.length + 1}`}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div class="cameras-container">
+          {cameras.map((deviceId) => (
+            <MotionDetector
+              key={deviceId}
+              deviceId={deviceId}
+              onMotion={handleMotion}
+              diffThreshold={25}
+              motionPixelRatio={0.01}
+              intervalMs={200}
+            />
+          ))}
+        </div>
       </div>
     </>
   );

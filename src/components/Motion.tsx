@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import useOpenCv from "../hooks/useOpenCv";
 
 interface MotionWithOverlayProps {
+  deviceId: string;
   onMotion?: (timestamp: Date, frame: string) => void;
   diffThreshold?: number;
   motionPixelRatio?: number;
@@ -8,34 +10,23 @@ interface MotionWithOverlayProps {
 }
 
 const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
+  deviceId,
   onMotion = (ts, frame) => console.log("Motion at:", ts, "frame:", frame),
   diffThreshold = 30,
   motionPixelRatio = 0.02,
   intervalMs = 200,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevGrayRef = useRef<any | null>(null);
-  const [isCvReady, setCvReady] = useState(false);
-
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://docs.opencv.org/4.5.4/opencv.js";
-    script.async = true;
-    script.onload = () => {
-      (window as any)["cv"].onRuntimeInitialized = () => {
-        console.log("OpenCV ready");
-        setCvReady(true);
-      };
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+  const isCvReady = useOpenCv();
 
   useEffect(() => {
     if (!isCvReady) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.getContext("2d", { willReadFrequently: true });
 
     const cv = (window as any)["cv"];
     let streaming = false;
@@ -44,7 +35,7 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
     if (!video) return;
 
     navigator.mediaDevices
-      .getUserMedia({ video: true })
+      .getUserMedia({ video: { deviceId: { exact: deviceId } } })
       .then((stream) => {
         video.srcObject = stream;
         video.play();
@@ -86,10 +77,15 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
         const ratio = nonZero / total;
 
         if (ratio > motionPixelRatio) {
-          const canvas = document.createElement("canvas");
-          cv.imshow(canvas, frame);
-          const dataUrl = canvas.toDataURL("image/jpeg");
-          onMotion(new Date(), dataUrl);
+          if (import.meta.env.DEV) {
+            console.log("Motion detected at:", new Date());
+          }
+          const canvas = canvasRef.current;
+          if (canvas) {
+            cv.imshow(canvas, frame);
+            const dataUrl = canvas.toDataURL("image/jpeg");
+            onMotion(new Date(), dataUrl);
+          }
         }
 
         diff.delete();
@@ -110,11 +106,19 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
         prevGrayRef.current.delete();
       }
     };
-  }, [isCvReady, intervalMs, diffThreshold, motionPixelRatio, onMotion]);
+  }, [
+    deviceId,
+    isCvReady,
+    intervalMs,
+    diffThreshold,
+    motionPixelRatio,
+    onMotion,
+  ]);
 
   return (
     <div>
       <video ref={videoRef} />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
       {!isCvReady && <div>Loading OpenCV...</div>}
     </div>
   );
