@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "motion/react";
 import { useTheme } from "./hooks/useTheme";
 import logo from "./assets/logo.svg";
+import { Github } from "lucide-react";
 
 export function App() {
   const { theme, setTheme } = useTheme();
@@ -90,6 +91,16 @@ export function App() {
           <Button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
             Toggle Theme
           </Button>
+          <a
+            href="https://github.com/eifr/Vigilo"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline">
+              <Github class="w-4 h-4 mr-2" />
+              Source Code
+            </Button>
+          </a>
         </div>
       </header>
       <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
