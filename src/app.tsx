@@ -33,6 +33,17 @@ export function App() {
   );
 
   const handleAddCameraClick = async () => {
+    try {
+      // Request camera permission first. This is necessary for enumerateDevices()
+      // to return a complete list of devices on some platforms.
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Stop the stream immediately after getting permission.
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (err) {
+      console.error("Error requesting camera permission:", err);
+      // Optionally, inform the user that permission is needed.
+    }
+
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(
       (device) => device.kind === "videoinput"
