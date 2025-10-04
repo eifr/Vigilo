@@ -189,6 +189,9 @@ export function App() {
           </Card>
         </div>
       </main>
+      <footer class="text-center p-4 text-sm text-muted-foreground">
+        <p>© {new Date().getFullYear()} eifr. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
