@@ -3,8 +3,14 @@ import "./app.css";
 import MotionDetector from "./components/Motion";
 import { TelegramSettings } from "./components/TelegramSettings";
 import { useTelegram } from "./hooks/useTelegram";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "motion/react";
+import { useTheme } from "./hooks/useTheme";
+import logo from "./assets/logo.svg";
 
 export function App() {
+  const { theme, setTheme } = useTheme();
   const {
     telegramBotToken,
     setTelegramBotToken,
@@ -21,6 +27,7 @@ export function App() {
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>(
     []
   );
+  const [showCameras, setShowCameras] = useState(true);
 
   const handleMotion = useCallback(
     (_: Date, frame: string) => {
@@ -58,47 +65,100 @@ export function App() {
     setAvailableDevices([]); // Hide list after selection
   };
 
-  return (
-    <>
-      <div>
-        <h1>Vigilo</h1>
+  const removeCamera = (deviceId: string) => {
+    setCameras(cameras.filter((id) => id !== deviceId));
+  };
 
-        <TelegramSettings
-          sendTelegrams={sendTelegrams}
-          setSendTelegrams={setSendTelegrams}
-          telegramBotToken={telegramBotToken}
-          setTelegramBotToken={setTelegramBotToken}
-          telegramChatId={telegramChatId}
-          debounceTime={debounceTime}
-          setDebounceTime={setDebounceTime}
-          onStartChat={handleStartChat}
-          botUsername={botUsername}
-        />
-        <button onClick={handleAddCameraClick}>Add camera</button>
-        {availableDevices.length > 0 && (
-          <ul>
-            {availableDevices.map((device) => (
-              <li key={device.deviceId}>
-                <button onClick={() => addCamera(device.deviceId)}>
-                  {device.label || `Camera ${cameras.length + 1}`}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div class="cameras-container">
-          {cameras.map((deviceId) => (
-            <MotionDetector
-              key={deviceId}
-              deviceId={deviceId}
-              onMotion={handleMotion}
-              diffThreshold={25}
-              motionPixelRatio={0.01}
-              intervalMs={200}
-            />
-          ))}
+  return (
+    <div class="min-h-screen w-full max-w-7xl mx-auto p-4">
+      <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4">
+        <div class="flex items-center gap-3">
+          <img src={logo} alt="Vigilo Logo" class="logo" />
+          <h1 class="text-2xl font-bold">Vigilo</h1>
         </div>
-      </div>
-    </>
+        <div class="flex gap-2">
+          <Button
+            onClick={() => setShowCameras(!showCameras)}
+            variant="outline"
+          >
+            {showCameras ? "Hide" : "Show"} Cameras
+          </Button>
+          <Button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+            Toggle Theme
+          </Button>
+        </div>
+      </header>
+      <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TelegramSettings
+                sendTelegrams={sendTelegrams}
+                setSendTelegrams={setSendTelegrams}
+                telegramBotToken={telegramBotToken}
+                setTelegramBotToken={setTelegramBotToken}
+                telegramChatId={telegramChatId}
+                debounceTime={debounceTime}
+                setDebounceTime={setDebounceTime}
+                onStartChat={handleStartChat}
+                botUsername={botUsername}
+              />
+              <div class="my-4">
+                <Button onClick={handleAddCameraClick}>Add camera</Button>
+              </div>
+              {availableDevices.length > 0 && (
+                <ul class="my-4 space-y-2">
+                  {availableDevices.map((device) => (
+                    <li key={device.deviceId}>
+                      <Button
+                        variant="outline"
+                        onClick={() => addCamera(device.deviceId)}
+                      >
+                        {device.label || `Camera ${cameras.length + 1}`}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+        <div class="w-full">
+          <motion.div
+            className="grid grid-cols-1 gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {cameras.map((deviceId) => (
+              <div key={deviceId} class="camera-wrapper">
+                <MotionDetector
+                  deviceId={deviceId}
+                  onMotion={handleMotion}
+                  diffThreshold={25}
+                  motionPixelRatio={0.01}
+                  intervalMs={200}
+                  hidePreview={!showCameras}
+                />
+                <Button
+                  variant="destructive"
+                  onClick={() => removeCamera(deviceId)}
+                  class="mt-2 w-full"
+                >
+                  Remove camera
+                </Button>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </main>
+    </div>
   );
 }

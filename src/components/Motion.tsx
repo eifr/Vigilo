@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import useOpenCv from "../hooks/useOpenCv";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MotionWithOverlayProps {
   deviceId: string;
@@ -7,6 +9,7 @@ interface MotionWithOverlayProps {
   diffThreshold?: number;
   motionPixelRatio?: number;
   intervalMs?: number;
+  hidePreview?: boolean;
 }
 
 const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
@@ -15,6 +18,7 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
   diffThreshold = 30,
   motionPixelRatio = 0.02,
   intervalMs = 200,
+  hidePreview = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -116,11 +120,17 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
   ]);
 
   return (
-    <div>
-      <video ref={videoRef} />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
-      {!isCvReady && <div>Loading OpenCV...</div>}
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        {!isCvReady && <Skeleton className="w-full h-full absolute inset-0" />}
+        <video
+          ref={videoRef}
+          className="w-full h-auto"
+          style={{ display: hidePreview ? "none" : "block" }}
+        />
+        <canvas ref={canvasRef} style={{ display: "none" }} />
+      </CardContent>
+    </Card>
   );
 };
 
