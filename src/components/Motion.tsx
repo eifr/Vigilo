@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import useOpenCv from "../hooks/useOpenCv";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "motion/react";
 
 interface MotionWithOverlayProps {
   deviceId: string;
@@ -23,6 +24,7 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevGrayRef = useRef<any | null>(null);
   const isCvReady = useOpenCv();
+  const [isMotionDetected, setIsMotionDetected] = useState(false);
 
   useEffect(() => {
     if (!isCvReady) return;
@@ -83,6 +85,8 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
           if (import.meta.env.DEV) {
             console.log("Motion detected at:", new Date());
           }
+          setIsMotionDetected(true);
+          setTimeout(() => setIsMotionDetected(false), 500);
           const canvas = canvasRef.current;
           if (canvas) {
             cv.imshow(canvas, frame);
@@ -119,7 +123,15 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
   ]);
 
   return (
-    <>
+    <motion.div
+      animate={{
+        scale: isMotionDetected ? 1.05 : 1,
+        boxShadow: isMotionDetected
+          ? "0 0 10px 5px rgba(255, 0, 0, 0.7)"
+          : "0 0 0px 0px rgba(255, 0, 0, 0)",
+      }}
+      transition={{ duration: 0.2 }}
+    >
       {!isCvReady && <Skeleton className="w-full h-full absolute inset-0" />}
       <video
         ref={videoRef}
@@ -127,7 +139,7 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
         style={{ display: hidePreview ? "none" : "block" }}
       />
       <canvas ref={canvasRef} style={{ display: "none" }} />
-    </>
+    </motion.div>
   );
 };
 

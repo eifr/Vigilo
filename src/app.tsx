@@ -27,13 +27,18 @@ export function App() {
     []
   );
   const [showCameras, setShowCameras] = useState(true);
+  const [motionDetectedDeviceId, setMotionDetectedDeviceId] = useState<
+    string | null
+  >(null);
 
   const handleMotion = useCallback(
-    (_: Date, frame: string) => {
+    (deviceId: string, _: Date, frame: string) => {
       if (!sendTelegrams) {
         return;
       }
       sendTelegramMessage(frame);
+      setMotionDetectedDeviceId(deviceId);
+      setTimeout(() => setMotionDetectedDeviceId(null), 1000);
     },
     [sendTelegrams, sendTelegramMessage]
   );
@@ -142,19 +147,30 @@ export function App() {
                   <div key={deviceId} class="camera-wrapper">
                     <MotionDetector
                       deviceId={deviceId}
-                      onMotion={handleMotion}
+                      onMotion={(...args) => handleMotion(deviceId, ...args)}
                       diffThreshold={25}
                       motionPixelRatio={0.01}
                       intervalMs={200}
                       hidePreview={!showCameras}
                     />
-                    <Button
-                      variant="destructive"
-                      onClick={() => removeCamera(deviceId)}
-                      class="mt-2 w-full"
+                    <motion.div
+                      animate={{
+                        scale: motionDetectedDeviceId === deviceId ? 1.05 : 1,
+                      }}
+                      transition={{
+                        duration: 0.2,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                      }}
                     >
-                      Remove camera
-                    </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => removeCamera(deviceId)}
+                        class="mt-2 w-full"
+                      >
+                        Remove camera
+                      </Button>
+                    </motion.div>
                   </div>
                 ))}
               </motion.div>
