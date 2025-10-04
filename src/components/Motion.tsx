@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from "react";
 import useOpenCv from "../hooks/useOpenCv";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface MotionWithOverlayProps {
@@ -120,17 +119,15 @@ const MotionWithOverlay: React.FC<MotionWithOverlayProps> = ({
   ]);
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        {!isCvReady && <Skeleton className="w-full h-full absolute inset-0" />}
-        <video
-          ref={videoRef}
-          className="w-full h-auto"
-          style={{ display: hidePreview ? "none" : "block" }}
-        />
-        <canvas ref={canvasRef} style={{ display: "none" }} />
-      </CardContent>
-    </Card>
+    <>
+      {!isCvReady && <Skeleton className="w-full h-full absolute inset-0" />}
+      <video
+        ref={videoRef}
+        className="w-full h-auto"
+        style={{ display: hidePreview ? "none" : "block" }}
+      />
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+    </>
   );
 };
 

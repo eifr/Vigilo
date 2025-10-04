@@ -1,5 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-    <path d="M10 50 C 20 20, 80 20, 90 50 C 80 80, 20 80, 10 50 Z" fill="none" stroke="black"
-        stroke-width="4" />
-    <circle cx="50" cy="50" r="15" fill="black" />
+    <defs>
+        <linearGradient id="cool-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#007BFF;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#00C6FF;stop-opacity:1" />
+        </linearGradient>
+        <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+            <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+            </feMerge>
+        </filter>
+    </defs>
+
+    <!-- Shield/V Shape -->
+    <path d="M50 10 L90 30 L50 90 L10 30 Z" fill="url(#cool-gradient)" filter="url(#glow)" />
 </svg>

@@ -7,60 +7,74 @@ export function useTelegram() {
   const [debounceTime, setDebounceTime] = useState(5000);
   const [botUsername, setBotUsername] = useState("");
   const [isPolling, setIsPolling] = useState(false);
+  const pollTimeoutRef = useRef<number | null>(null);
 
-  const getBotUsername = async () => {
-    if (!telegramBotToken) return;
+  const getBotUsername = useCallback(async (token: string) => {
+    if (!token) {
+      setBotUsername("");
+      return;
+    }
     try {
       const response = await fetch(
-        `https://api.telegram.org/bot${telegramBotToken}/getMe`
+        `https://api.telegram.org/bot${token}/getMe`
       );
       const data = await response.json();
       if (data.ok) {
         setBotUsername(data.result.username);
+        pollForChatId(token);
       } else {
+        setBotUsername("");
         console.error("Error getting bot username:", data.description);
       }
     } catch (error) {
+      setBotUsername("");
       console.error("Error getting bot username:", error);
     }
-  };
+  }, []);
 
-  const pollForChatId = async () => {
-    if (!telegramBotToken || isPolling) return;
-    setIsPolling(true);
-    let lastUpdateId = 0;
-    const poll = async () => {
-      try {
-        const response = await fetch(
-          `https://api.telegram.org/bot${telegramBotToken}/getUpdates?offset=${lastUpdateId}`
-        );
-        const data = await response.json();
-        if (data.ok && data.result.length > 0) {
-          const lastUpdate = data.result[data.result.length - 1];
-          setTelegramChatId(lastUpdate.message.chat.id.toString());
-          lastUpdateId = lastUpdate.update_id + 1;
+  const pollForChatId = useCallback(
+    async (token: string) => {
+      if (isPolling) return;
+      setIsPolling(true);
+      let lastUpdateId = 0;
+
+      const poll = async () => {
+        try {
+          const response = await fetch(
+            `https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId}`
+          );
+          const data = await response.json();
+          if (data.ok && data.result.length > 0) {
+            const lastUpdate = data.result[data.result.length - 1];
+            setTelegramChatId(lastUpdate.message.chat.id.toString());
+            lastUpdateId = lastUpdate.update_id + 1;
+            setIsPolling(false);
+            if (pollTimeoutRef.current) {
+              clearTimeout(pollTimeoutRef.current);
+            }
+          } else if (isPolling) {
+            pollTimeoutRef.current = setTimeout(poll, 1000);
+          }
+        } catch (error) {
+          console.error("Error polling for chat ID:", error);
           setIsPolling(false);
-        } else {
-          setTimeout(poll, 1000);
         }
-      } catch (error) {
-        console.error("Error polling for chat ID:", error);
-        setIsPolling(false);
-      }
-    };
-    poll();
-  };
-
-  const handleStartChat = async () => {
-    await getBotUsername();
-    pollForChatId();
-  };
+      };
+      poll();
+    },
+    [isPolling]
+  );
 
   useEffect(() => {
-    if (botUsername) {
-      window.open(`https://t.me/${botUsername}`, "_blank");
-    }
-  }, [botUsername]);
+    getBotUsername(telegramBotToken);
+
+    return () => {
+      setIsPolling(false);
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
+    };
+  }, [telegramBotToken, getBotUsername]);
 
   const isThrottled = useRef(false);
 
@@ -124,7 +138,6 @@ export function useTelegram() {
     debounceTime,
     setDebounceTime,
     sendTelegramMessage,
-    handleStartChat,
     botUsername,
   };
 }

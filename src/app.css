@@ -3,8 +3,14 @@
   height: 40px;
 }
 
+.camera-wrapper {
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  overflow: hidden;
+}
+
 .camera-wrapper video {
   width: 100%;
   height: auto;
-  border-radius: 0.5rem;
+  display: block;
 }

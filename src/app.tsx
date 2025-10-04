@@ -20,7 +20,6 @@ export function App() {
     debounceTime,
     setDebounceTime,
     sendTelegramMessage,
-    handleStartChat,
     botUsername,
   } = useTelegram();
   const [cameras, setCameras] = useState<string[]>([]);
@@ -107,12 +106,18 @@ export function App() {
                 telegramChatId={telegramChatId}
                 debounceTime={debounceTime}
                 setDebounceTime={setDebounceTime}
-                onStartChat={handleStartChat}
                 botUsername={botUsername}
               />
-              <div class="my-4">
-                <Button onClick={handleAddCameraClick}>Add camera</Button>
-              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <div class="w-full">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cameras</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleAddCameraClick}>Add camera</Button>
               {availableDevices.length > 0 && (
                 <ul class="my-4 space-y-2">
                   {availableDevices.map((device) => (
@@ -127,36 +132,34 @@ export function App() {
                   ))}
                 </ul>
               )}
+              <motion.div
+                className="grid grid-cols-1 gap-4 mt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                {cameras.map((deviceId) => (
+                  <div key={deviceId} class="camera-wrapper">
+                    <MotionDetector
+                      deviceId={deviceId}
+                      onMotion={handleMotion}
+                      diffThreshold={25}
+                      motionPixelRatio={0.01}
+                      intervalMs={200}
+                      hidePreview={!showCameras}
+                    />
+                    <Button
+                      variant="destructive"
+                      onClick={() => removeCamera(deviceId)}
+                      class="mt-2 w-full"
+                    >
+                      Remove camera
+                    </Button>
+                  </div>
+                ))}
+              </motion.div>
             </CardContent>
           </Card>
-        </motion.div>
-        <div class="w-full">
-          <motion.div
-            className="grid grid-cols-1 gap-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            {cameras.map((deviceId) => (
-              <div key={deviceId} class="camera-wrapper">
-                <MotionDetector
-                  deviceId={deviceId}
-                  onMotion={handleMotion}
-                  diffThreshold={25}
-                  motionPixelRatio={0.01}
-                  intervalMs={200}
-                  hidePreview={!showCameras}
-                />
-                <Button
-                  variant="destructive"
-                  onClick={() => removeCamera(deviceId)}
-                  class="mt-2 w-full"
-                >
-                  Remove camera
-                </Button>
-              </div>
-            ))}
-          </motion.div>
         </div>
       </main>
     </div>
