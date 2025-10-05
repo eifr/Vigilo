@@ -17,6 +17,7 @@
     "@types/qrcode.react": "^3.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "grammy": "^1.38.3",
     "lucide-react": "^0.544.0",
     "motion": "^12.23.22",
     "preact": "^10.27.2",

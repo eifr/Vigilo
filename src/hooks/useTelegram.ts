@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
+import { Bot, InputFile } from "grammy";
 
 export function useTelegram() {
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -6,75 +7,57 @@ export function useTelegram() {
   const [sendTelegrams, setSendTelegrams] = useState(false);
   const [debounceTime, setDebounceTime] = useState(5000);
   const [botUsername, setBotUsername] = useState("");
-  const [isPolling, setIsPolling] = useState(false);
-  const pollTimeoutRef = useRef<number | null>(null);
-
-  const getBotUsername = useCallback(async (token: string) => {
-    if (!token) {
-      setBotUsername("");
-      return;
-    }
-    try {
-      const response = await fetch(
-        `https://api.telegram.org/bot${token}/getMe`
-      );
-      const data = await response.json();
-      if (data.ok) {
-        setBotUsername(data.result.username);
-        pollForChatId(token);
-      } else {
-        setBotUsername("");
-        console.error("Error getting bot username:", data.description);
-      }
-    } catch (error) {
-      setBotUsername("");
-      console.error("Error getting bot username:", error);
-    }
-  }, []);
-
-  const pollForChatId = useCallback(
-    async (token: string) => {
-      if (isPolling) return;
-      setIsPolling(true);
-      let lastUpdateId = 0;
-
-      const poll = async () => {
-        try {
-          const response = await fetch(
-            `https://api.telegram.org/bot${token}/getUpdates?offset=${lastUpdateId}`
-          );
-          const data = await response.json();
-          if (data.ok && data.result.length > 0) {
-            const lastUpdate = data.result[data.result.length - 1];
-            setTelegramChatId(lastUpdate.message.chat.id.toString());
-            lastUpdateId = lastUpdate.update_id + 1;
-            setIsPolling(false);
-            if (pollTimeoutRef.current) {
-              clearTimeout(pollTimeoutRef.current);
-            }
-          } else if (isPolling) {
-            pollTimeoutRef.current = setTimeout(poll, 1000);
-          }
-        } catch (error) {
-          console.error("Error polling for chat ID:", error);
-          setIsPolling(false);
-        }
-      };
-      poll();
-    },
-    [isPolling]
-  );
+  const botRef = useRef<Bot | null>(null);
 
   useEffect(() => {
-    getBotUsername(telegramBotToken);
+    if (botRef.current) {
+      botRef.current.stop().catch(() => {
+        /* ignore error if already stopped */
+      });
+    }
+
+    if (!telegramBotToken) {
+      setBotUsername("");
+      botRef.current = null;
+      return;
+    }
+
+    const bot = new Bot(telegramBotToken);
+    botRef.current = bot;
+
+    bot.api
+      .getMe()
+      .then((me) => setBotUsername(me.username))
+      .catch((err) => {
+        console.error("Error getting bot username:", err);
+        setBotUsername("");
+      });
+
+    if (!telegramChatId) {
+      bot.on("message", (ctx) => {
+        console.log(ctx);
+        setTelegramChatId(ctx.message.chat.id.toString());
+        bot.stop();
+      });
+
+      bot
+        .start({
+          allowed_updates: ["message"],
+          onStart: (me) => {
+            console.log(`Bot ${me.username} started listening for chat ID.`);
+          },
+        })
+        .catch((err) => {
+          console.error("Error with bot polling:", err);
+        });
+    }
 
     return () => {
-      setIsPolling(false);
-      if (pollTimeoutRef.current) {
-        clearTimeout(pollTimeoutRef.current);
-      }
+      bot.stop().catch(() => {
+        /* ignore error if already stopped */
+      });
     };
-  }, [telegramBotToken, getBotUsername]);
+  }, [telegramBotToken, telegramChatId]);
 
   const isThrottled = useRef(false);
 
@@ -92,8 +75,9 @@ export function useTelegram() {
         isThrottled.current = false;
       }, debounceTime);
 
+      if (!botRef.current) return;
+
       const message = `Movement detected at ${new Date().toLocaleTimeString()}`;
-      const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
 
       // Convert data URL to Blob
       const byteString = atob(frame.split(",")[1]);
@@ -104,23 +88,12 @@ export function useTelegram() {
         ia[i] = byteString.charCodeAt(i);
       }
       const blob = new Blob([ab], { type: mimeString });
+      const inputFile = new InputFile(blob, "motion.jpg");
 
-      const formData = new FormData();
-      formData.append("chat_id", telegramChatId);
-      formData.append("photo", blob, "motion.jpg");
-      formData.append("caption", message);
-
-      fetch(url, {
-        method: "POST",
-        body: formData,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (!data.ok) {
-            console.error("Error sending Telegram message:", data.description);
-          } else {
-            console.log("Telegram message sent successfully");
-          }
+      botRef.current.api
+        .sendPhoto(telegramChatId, inputFile, { caption: message })
+        .then(() => {
+          console.log("Telegram message sent successfully");
         })
         .catch((error) => {
           console.error("Error sending Telegram message:", error);
