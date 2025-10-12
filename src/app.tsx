@@ -205,7 +205,7 @@ export function App() {
       <footer class="text-center p-4 text-sm text-muted-foreground space-y-2">
         <p>© {new Date().getFullYear()} eifr. All rights reserved.</p>
         <p>
-          Version 0.0.0 |{" "}
+          Version 0.0.1 |{" "}
           <a
             href="https://github.com/eifr/Vigilo/issues"
             target="_blank"
