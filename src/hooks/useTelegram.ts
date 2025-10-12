@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
-import { Bot, InputFile } from "grammy";
+import { Bot } from "grammy";
 
 export function useTelegram() {
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -75,28 +75,38 @@ export function useTelegram() {
         isThrottled.current = false;
       }, debounceTime);
 
-      if (!botRef.current) return;
-
       const message = `Movement detected at ${new Date().toLocaleTimeString()}`;
 
       // Convert data URL to Blob
       const byteString = atob(frame.split(",")[1]);
-      const mimeString = frame.split(",")[0].split(":")[1].split(";")[0];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i);
       }
-      const blob = new Blob([ab], { type: mimeString });
-      const inputFile = new InputFile(blob, "motion.jpg");
+      const blob = new Blob([ia], { type: "image/jpeg" });
 
-      botRef.current.api
-        .sendPhoto(telegramChatId, inputFile, { caption: message })
-        .then(() => {
-          console.log("Telegram message sent successfully");
+      // Send photo using fetch
+      const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+      const formData = new FormData();
+      formData.append('chat_id', telegramChatId);
+      formData.append('photo', blob, 'motion.jpg');
+      formData.append('caption', message);
+
+      fetch(url, {
+        method: 'POST',
+        body: formData,
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.ok) {
+            console.log("Telegram photo sent successfully");
+          } else {
+            console.error("Error sending Telegram photo:", data);
+          }
         })
         .catch((error) => {
-          console.error("Error sending Telegram message:", error);
+          console.error("Error sending Telegram photo:", error);
         });
     },
     [sendTelegrams, telegramBotToken, telegramChatId, debounceTime]

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "preact/hooks";
 import "./app.css";
-import MotionDetector from "./components/Motion";
+import { CameraMotionDetector } from "./components/Motion";
 import { TelegramSettings } from "./components/TelegramSettings";
 import { useTelegram } from "./hooks/useTelegram";
 import { Button } from "@/components/ui/button";
@@ -156,7 +156,7 @@ export function App() {
               >
                 {cameras.map((deviceId) => (
                   <div key={deviceId} class="camera-wrapper">
-                    <MotionDetector
+                    <CameraMotionDetector
                       deviceId={deviceId}
                       onMotion={(...args) => handleMotion(deviceId, ...args)}
                       diffThreshold={25}
