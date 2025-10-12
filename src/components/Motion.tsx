@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import useOpenCv from "../hooks/useOpenCv";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "motion/react";
+import { AlertTriangle } from "lucide-react";
 
 interface MotionWithOverlayProps {
   deviceId: string;
@@ -130,25 +131,35 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
 
   return (
     <motion.div
+      className="relative"
       animate={{
-        // scale: isMotionDetected ? 1.01 : 1,
         boxShadow: isMotionDetected
-          ? "0 0 10px 5px rgba(255, 0, 0, 0.7)"
-          : "0 0 0px 0px rgba(255, 0, 0, 0)",
+          ? "0 0 20px 5px rgba(239, 68, 68, 0.5)"
+          : "0 0 0px 0px rgba(239, 68, 68, 0)",
 
         borderRadius: "0.5rem",
-        border: "1px solid hsl(var(--border))",
+        border: isMotionDetected ? "2px solid hsl(var(--destructive))" : "1px solid hsl(var(--border))",
         overflow: "hidden",
       }}
       transition={{ duration: 0.2 }}
     >
-      {!cv && <Skeleton className="w-full h-full absolute inset-0" />}
+      {!cv && <Skeleton className="w-full h-full absolute inset-0 rounded-md" />}
       <video
         ref={videoRef}
-        className="w-full h-auto"
+        className="w-full h-auto rounded-md"
         style={{ display: hidePreview ? "none" : "block" }}
       />
       <canvas ref={canvasRef} style={{ display: "none" }} />
+      {isMotionDetected && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded-full"
+        >
+          <AlertTriangle className="w-4 h-4" />
+        </motion.div>
+      )}
     </motion.div>
   );
 };

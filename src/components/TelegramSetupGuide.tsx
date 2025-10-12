@@ -1,7 +1,12 @@
 import { useState } from "preact/hooks";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CheckCircle, Circle } from "lucide-react";
 
-export function TelegramSetupGuide() {
+interface TelegramSetupGuideProps {
+  botUsername?: string;
+  telegramChatId?: string;
+}
+
+export function TelegramSetupGuide({ botUsername, telegramChatId }: TelegramSetupGuideProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -19,36 +24,66 @@ export function TelegramSetupGuide() {
       </button>
       {isOpen && (
         <div className="p-4 pt-0 text-sm">
-          <ol className="list-decimal list-inside space-y-2">
-            <li>
-              Open Telegram and search for{" "}
-              <a
-                href="https://t.me/BotFather"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                @BotFather
-              </a>
-              , or click the link.
+          <ol className="space-y-3">
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <span>
+                Open Telegram and search for{" "}
+                <a
+                  href="https://t.me/BotFather"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  @BotFather
+                </a>
+                , or click the link.
+              </span>
             </li>
-            <li>
-              Send the <code>/newbot</code> command to create a new bot.
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <span>
+                Send the <code>/newbot</code> command to create a new bot.
+              </span>
             </li>
-            <li>
-              Follow the instructions from BotFather to set up a name and
-              username.
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <span>
+                Follow the instructions from BotFather to set up a name and
+                username.
+              </span>
             </li>
-            <li>
-              BotFather will give you a token. Copy this token and paste it into
-              the "Telegram Bot Token" field below.
+            <li className="flex items-start gap-2">
+              {botUsername ? (
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              ) : (
+                <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              )}
+              <span>
+                BotFather will give you a token. Copy this token and paste it into
+                the "Telegram Bot Token" field below.
+              </span>
             </li>
-            <li>
-              Once you enter a valid token, a link and QR code will appear.
-              Click it to open a chat with your bot and press the{" "}
-              <strong>Start</strong> button.
+            <li className="flex items-start gap-2">
+              {botUsername ? (
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              ) : (
+                <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              )}
+              <span>
+                Once you enter a valid token, a link and QR code will appear.
+                Click it to open a chat with your bot and press the{" "}
+                <strong>Start</strong> button.
+              </span>
             </li>
-            <li>Your Chat ID will be automatically detected and filled in.</li>
+            <li className="flex items-start gap-2">
+              {telegramChatId ? (
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              ) : (
+                <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              )}
+              <span>Your Chat ID will be automatically detected and filled in.</span>
+            </li>
           </ol>
         </div>
       )}

@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { Bot } from "grammy";
+import { dataUrlToBlob } from "../lib/utils";
+import { MOTION_DETECTED_MESSAGE_PREFIX } from "../lib/constants";
 
 export function useTelegram() {
   const [telegramBotToken, setTelegramBotToken] = useState("");
@@ -75,16 +77,9 @@ export function useTelegram() {
         isThrottled.current = false;
       }, debounceTime);
 
-      const message = `Movement detected at ${new Date().toLocaleTimeString()}`;
+       const message = `${MOTION_DETECTED_MESSAGE_PREFIX} ${new Date().toLocaleTimeString()}`;
 
-      // Convert data URL to Blob
-      const byteString = atob(frame.split(",")[1]);
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([ia], { type: "image/jpeg" });
+       const blob = dataUrlToBlob(frame);
 
       // Send photo using fetch
       const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;

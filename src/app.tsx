@@ -1,14 +1,24 @@
-import { useCallback, useState } from "preact/hooks";
+import { useCallback, useState, useEffect } from "preact/hooks";
 import "./app.css";
-import { CameraMotionDetector } from "./components/Motion";
 import { TelegramSettings } from "./components/TelegramSettings";
+import { MotionSensitivitySettings } from "./components/MotionSensitivitySettings";
+import { CameraList } from "./components/CameraList";
 import { useTelegram } from "./hooks/useTelegram";
+import { useCamera } from "./hooks/useCamera";
+import { useNotifications } from "./hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "motion/react";
 import { useTheme } from "./hooks/useTheme";
 import logo from "./assets/logo.svg";
-import { Github } from "lucide-react";
+import { Github, Eye, EyeOff, Sun, Moon, Activity, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  MOTION_ACTIVE_DURATION_MS,
+  DEFAULT_DIFF_THRESHOLD,
+  DEFAULT_MOTION_PIXEL_RATIO,
+  DEFAULT_INTERVAL_MS,
+  KEYBOARD_SHORTCUTS,
+} from "./lib/constants";
 
 export function App() {
   const { theme, setTheme } = useTheme();
@@ -24,85 +34,131 @@ export function App() {
     botUsername,
   } = useTelegram();
   const [cameras, setCameras] = useState<string[]>([]);
-  const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>(
-    []
-  );
   const [showCameras, setShowCameras] = useState(true);
-  const [motionDetectedDeviceId, setMotionDetectedDeviceId] = useState<
-    string | null
-  >(null);
+  const [lastMotionTime, setLastMotionTime] = useState<Date | null>(null);
+  const [diffThreshold, setDiffThreshold] = useState(DEFAULT_DIFF_THRESHOLD);
+  const [motionPixelRatio, setMotionPixelRatio] = useState(DEFAULT_MOTION_PIXEL_RATIO);
+  const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
+
+  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } = useCamera();
+  const { notifications, addNotification } = useNotifications();
+
+  const isAppReady = cameras.length > 0 && telegramBotToken && telegramChatId;
+  const isMotionActive = lastMotionTime && (Date.now() - lastMotionTime.getTime()) < MOTION_ACTIVE_DURATION_MS;
+
+  const handleAddCamera = useCallback(() => {
+    requestCameraAccess();
+  }, [requestCameraAccess]);
+
+  const handleSelectCamera = useCallback((deviceId: string) => {
+    if (!cameras.includes(deviceId)) {
+      setCameras([...cameras, deviceId]);
+    }
+    addCamera(deviceId);
+  }, [cameras, addCamera]);
+
+  const handleRemoveCamera = useCallback((deviceId: string) => {
+    setCameras(cameras.filter((id) => id !== deviceId));
+  }, [cameras]);
 
   const handleMotion = useCallback(
-    (deviceId: string, _: Date, frame: string) => {
+    (deviceId: string, timestamp: Date, frame: string) => {
+      const cameraIndex = cameras.findIndex(id => id === deviceId) + 1;
+      addNotification(`Motion detected on Camera ${cameraIndex}!`, "info");
       if (!sendTelegrams) {
         return;
       }
       sendTelegramMessage(frame);
-      setMotionDetectedDeviceId(deviceId);
-      setTimeout(() => setMotionDetectedDeviceId(null), 1000);
+      setLastMotionTime(timestamp);
     },
-    [sendTelegrams, sendTelegramMessage]
+    [sendTelegrams, sendTelegramMessage, cameras, addNotification]
   );
 
-  const handleAddCameraClick = async () => {
-    try {
-      // Request camera permission first. This is necessary for enumerateDevices()
-      // to return a complete list of devices on some platforms.
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      // Stop the stream immediately after getting permission.
-      stream.getTracks().forEach((track) => track.stop());
-    } catch (err) {
-      console.error("Error requesting camera permission:", err);
-      // Optionally, inform the user that permission is needed.
-    }
-
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(
-      (device) => device.kind === "videoinput"
-    );
-    setAvailableDevices(videoDevices);
-  };
-
-  const addCamera = (deviceId: string) => {
-    if (!cameras.includes(deviceId)) {
-      setCameras([...cameras, deviceId]);
-    }
-    setAvailableDevices([]); // Hide list after selection
-  };
-
-  const removeCamera = (deviceId: string) => {
-    setCameras(cameras.filter((id) => id !== deviceId));
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      switch (e.key.toLowerCase()) {
+        case KEYBOARD_SHORTCUTS.ADD_CAMERA:
+          handleAddCamera();
+          break;
+        case KEYBOARD_SHORTCUTS.TOGGLE_THEME:
+          setTheme(theme === "dark" ? "light" : "dark");
+          break;
+        case KEYBOARD_SHORTCUTS.TOGGLE_CAMERAS:
+          setShowCameras(!showCameras);
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [theme, showCameras, handleAddCamera]);
 
   return (
-    <div class="min-h-screen w-full max-w-7xl mx-auto p-4">
-      <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4">
+    <div class="min-h-screen w-full max-w-7xl mx-auto p-2 sm:p-4">
+      <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4 p-4 bg-card rounded-lg shadow-sm">
         <div class="flex items-center gap-3">
           <img src={logo} alt="Vigilo Logo" class="logo" />
           <h1 class="text-2xl font-bold">Vigilo</h1>
+          <div class="flex items-center gap-1 text-sm">
+            {isMotionActive ? (
+              <Activity class="w-4 h-4 text-red-500" />
+            ) : isAppReady ? (
+              <CheckCircle class="w-4 h-4 text-green-500" />
+            ) : (
+              <AlertCircle class="w-4 h-4 text-yellow-500" />
+            )}
+            <span class="hidden sm:inline">
+              {isMotionActive ? "Motion Detected" : isAppReady ? "Ready" : "Setup Required"}
+            </span>
+          </div>
         </div>
         <div class="flex gap-2">
           <Button
             onClick={() => setShowCameras(!showCameras)}
             variant="outline"
+            size="sm"
+            title="Toggle camera previews (Shortcut: H)"
           >
+            {showCameras ? <EyeOff class="w-4 h-4 mr-2" /> : <Eye class="w-4 h-4 mr-2" />}
             {showCameras ? "Hide" : "Show"} Cameras
           </Button>
-          <Button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            Toggle Theme
+          <Button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            variant="outline"
+            size="sm"
+            title="Toggle theme (Shortcut: T)"
+          >
+            {theme === "dark" ? <Sun class="w-4 h-4 mr-2" /> : <Moon class="w-4 h-4 mr-2" />}
+            Theme
           </Button>
           <a
             href="https://github.com/eifr/Vigilo"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button variant="outline">
+            <Button variant="outline" size="sm">
               <Github class="w-4 h-4 mr-2" />
-              Source Code
+              GitHub
             </Button>
           </a>
         </div>
       </header>
+      {notifications.length > 0 && (
+        <div class="fixed top-4 right-4 z-50 space-y-2">
+          {notifications.map(notification => (
+            <motion.div
+              key={notification.id}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              class={`p-3 rounded-lg shadow-lg text-sm ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                }`}
+            >
+              {notification.message}
+            </motion.div>
+          ))}
+        </div>
+      )}
       <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -124,73 +180,67 @@ export function App() {
                 setDebounceTime={setDebounceTime}
                 botUsername={botUsername}
               />
+              <MotionSensitivitySettings
+                diffThreshold={diffThreshold}
+                setDiffThreshold={setDiffThreshold}
+                motionPixelRatio={motionPixelRatio}
+                setMotionPixelRatio={setMotionPixelRatio}
+                intervalMs={intervalMs}
+                setIntervalMs={setIntervalMs}
+              />
             </CardContent>
           </Card>
         </motion.div>
-        <div class="w-full">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
           <Card>
             <CardHeader>
               <CardTitle>Cameras</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleAddCameraClick}>Add camera</Button>
-              {availableDevices.length > 0 && (
-                <ul class="my-4 space-y-2">
-                  {availableDevices.map((device) => (
-                    <li key={device.deviceId}>
-                      <Button
-                        variant="outline"
-                        onClick={() => addCamera(device.deviceId)}
-                      >
-                        {device.label || `Camera ${cameras.length + 1}`}
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <motion.div
-                className="grid grid-cols-1 gap-4 mt-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                {cameras.map((deviceId) => (
-                  <div key={deviceId} class="camera-wrapper">
-                    <CameraMotionDetector
-                      deviceId={deviceId}
-                      onMotion={(...args) => handleMotion(deviceId, ...args)}
-                      diffThreshold={25}
-                      motionPixelRatio={0.01}
-                      intervalMs={200}
-                      hidePreview={!showCameras}
-                    />
-                    <motion.div
-                      animate={{
-                        scale: motionDetectedDeviceId === deviceId ? 1.05 : 1,
-                      }}
-                      transition={{
-                        duration: 0.2,
-                        repeat: Infinity,
-                        repeatType: "reverse",
-                      }}
-                    >
-                      <Button
-                        variant="destructive"
-                        onClick={() => removeCamera(deviceId)}
-                        class="mt-2 w-full"
-                      >
-                        Remove camera
-                      </Button>
-                    </motion.div>
-                  </div>
-                ))}
-              </motion.div>
+              <CameraList
+                cameras={cameras}
+                availableDevices={availableDevices}
+                isLoadingCameras={isLoadingCameras}
+                cameraError={cameraError}
+                onAddCamera={handleAddCamera}
+                onSelectCamera={handleSelectCamera}
+                onRemoveCamera={handleRemoveCamera}
+                onMotion={handleMotion}
+                diffThreshold={diffThreshold}
+                motionPixelRatio={motionPixelRatio}
+                intervalMs={intervalMs}
+                showCameras={showCameras}
+              />
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </main>
-      <footer class="text-center p-4 text-sm text-muted-foreground">
+      <footer class="text-center p-4 text-sm text-muted-foreground space-y-2">
         <p>© {new Date().getFullYear()} eifr. All rights reserved.</p>
+        <p>
+          Version 0.0.0 |{" "}
+          <a
+            href="https://github.com/eifr/Vigilo/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:underline"
+          >
+            Report Issues
+          </a>{" "}
+          |{" "}
+          <a
+            href="https://github.com/eifr/Vigilo#readme"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:underline"
+          >
+            Documentation
+          </a>
+        </p>
       </footer>
     </div>
   );
