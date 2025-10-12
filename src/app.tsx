@@ -5,7 +5,7 @@ import { MotionSensitivitySettings } from "./components/MotionSensitivitySetting
 import { CameraList } from "./components/CameraList";
 import { useTelegram } from "./hooks/useTelegram";
 import { useCamera } from "./hooks/useCamera";
-import { useNotifications } from "./hooks/useNotifications";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "motion/react";
@@ -41,7 +41,7 @@ export function App() {
   const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
 
   const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } = useCamera();
-  const { notifications, addNotification } = useNotifications();
+
 
   const isAppReady = cameras.length > 0 && telegramBotToken && telegramChatId;
   const isMotionActive = lastMotionTime && (Date.now() - lastMotionTime.getTime()) < MOTION_ACTIVE_DURATION_MS;
@@ -63,15 +63,13 @@ export function App() {
 
   const handleMotion = useCallback(
     (deviceId: string, timestamp: Date, frame: string) => {
-      const cameraIndex = cameras.findIndex(id => id === deviceId) + 1;
-      addNotification(`Motion detected on Camera ${cameraIndex}!`, "info");
       if (!sendTelegrams) {
         return;
       }
       sendTelegramMessage(frame);
       setLastMotionTime(timestamp);
     },
-    [sendTelegrams, sendTelegramMessage, cameras, addNotification]
+    [sendTelegrams, sendTelegramMessage]
   );
 
   useEffect(() => {
@@ -143,22 +141,7 @@ export function App() {
           </a>
         </div>
       </header>
-      {notifications.length > 0 && (
-        <div class="fixed top-4 right-4 z-50 space-y-2">
-          {notifications.map(notification => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-              class={`p-3 rounded-lg shadow-lg text-sm ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-                }`}
-            >
-              {notification.message}
-            </motion.div>
-          ))}
-        </div>
-      )}
+
       <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}

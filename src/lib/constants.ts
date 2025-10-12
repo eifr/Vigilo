@@ -1,6 +1,5 @@
 // App constants
 export const MOTION_ACTIVE_DURATION_MS = 10000;
-export const NOTIFICATION_TIMEOUT_MS = 5000;
 
 // Default motion sensitivity settings
 export const DEFAULT_DIFF_THRESHOLD = 25;
@@ -25,11 +24,7 @@ export const KEYBOARD_SHORTCUTS = {
   TOGGLE_CAMERAS: 'h',
 } as const;
 
-// Notification types
-export const NOTIFICATION_TYPES = {
-  SUCCESS: 'success',
-  INFO: 'info',
-} as const;
+
 
 // Motion sensitivity ranges
 export const MOTION_SENSITIVITY_RANGES = {
