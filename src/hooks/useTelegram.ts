@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
-import { Bot } from "grammy";
+import { Bot, InputFile } from "grammy";
 import { dataUrlToBlob } from "../lib/utils";
 import { MOTION_DETECTED_MESSAGE_PREFIX, STATUS_COMMAND, STATUS_RESPONSE_PREFIX, STATUS_TIMESTAMP_PREFIX } from "../lib/constants";
 
@@ -13,6 +13,7 @@ export function useTelegram() {
   const [sendTelegrams, setSendTelegrams] = useState(false);
   const [debounceTime, setDebounceTime] = useState(5000);
   const [botUsername, setBotUsername] = useState("");
+  const [hasStatusHandler, setHasStatusHandler] = useState(false);
   const botRef = useRef<Bot | null>(null);
   const onStatusRequestRef = useRef<(() => void) | null>(null);
 
@@ -52,7 +53,12 @@ export function useTelegram() {
     if (!telegramChatId) {
       bot.on("message", (ctx) => {
         console.log(ctx);
-        setTelegramChatId(ctx.message.chat.id.toString());
+        const chatId = ctx.message.chat.id.toString();
+        setTelegramChatId(chatId);
+        // Send operational message
+        bot.api.sendMessage(chatId, "🚀 System is operational! You can now send /status to get system status and camera snapshots.").catch((error) => {
+          console.error("Error sending operational message:", error);
+        });
         bot.stop();
       });
 
@@ -66,7 +72,7 @@ export function useTelegram() {
         .catch((err) => {
           console.error("Error with bot polling:", err);
         });
-    } else if (onStatusRequestRef.current) {
+    } else if (hasStatusHandler) {
       // Listen for status command when chat ID is set
       bot.command(STATUS_COMMAND, () => {
         console.log("Status command received");
@@ -83,7 +89,7 @@ export function useTelegram() {
         /* ignore error if already stopped */
       });
     };
-  }, [telegramBotToken, telegramChatId]);
+  }, [telegramBotToken, telegramChatId, hasStatusHandler]);
 
   const isThrottled = useRef(false);
 
@@ -92,7 +98,7 @@ export function useTelegram() {
       if (isThrottled.current) {
         return;
       }
-      if (!sendTelegrams || !telegramBotToken || !telegramChatId) {
+      if (!sendTelegrams || !telegramChatId || !botRef.current) {
         return;
       }
 
@@ -105,59 +111,42 @@ export function useTelegram() {
 
       const blob = dataUrlToBlob(frame);
 
-      // Send photo using fetch
-      const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
-      const formData = new FormData();
-      formData.append('chat_id', telegramChatId);
-      formData.append('photo', blob, 'motion.jpg');
-      formData.append('caption', message);
-
-      fetch(url, {
-        method: 'POST',
-        body: formData,
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.ok) {
-            console.log("Telegram photo sent successfully");
-          } else {
-            console.error("Error sending Telegram photo:", data);
-          }
-        })
-        .catch((error) => {
-          console.error("Error sending Telegram photo:", error);
-        });
+      botRef.current.api.sendPhoto(telegramChatId, new InputFile(blob, 'motion.jpg'), {
+        caption: message,
+      }).then(() => {
+        console.log("Telegram photo sent successfully");
+      }).catch((error) => {
+        console.error("Error sending Telegram photo:", error);
+      });
     },
-    [sendTelegrams, telegramBotToken, telegramChatId, debounceTime]
+    [sendTelegrams, telegramChatId, debounceTime]
+  );
+
+  const sendMessage = useCallback(
+    (text: string) => {
+      if (!telegramChatId || !botRef.current) {
+        return;
+      }
+
+      botRef.current.api.sendMessage(telegramChatId, text).catch((error) => {
+        console.error("Error sending message:", error);
+      });
+    },
+    [telegramChatId]
   );
 
   const sendStatusResponse = useCallback(
     (frames: { frame: string; cameraIndex: number }[]) => {
-      if (!telegramBotToken || !telegramChatId) {
+      if (!telegramChatId || !botRef.current) {
         return;
       }
 
+      const bot = botRef.current;
+
       // Send status message first
-      const statusUrl = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
-      fetch(statusUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: telegramChatId,
-          text: STATUS_RESPONSE_PREFIX,
-        }),
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (!data.ok) {
-            console.error("Error sending status message:", data);
-          }
-        })
-        .catch((error) => {
-          console.error("Error sending status message:", error);
-        });
+      bot.api.sendMessage(telegramChatId, STATUS_RESPONSE_PREFIX).catch((error) => {
+        console.error("Error sending status message:", error);
+      });
 
       // Send photos for each camera
       frames.forEach(({ frame, cameraIndex }) => {
@@ -165,43 +154,48 @@ export function useTelegram() {
 
         const blob = dataUrlToBlob(frame);
 
-        const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
-        const formData = new FormData();
-        formData.append('chat_id', telegramChatId);
-        formData.append('photo', blob, `status_camera_${cameraIndex + 1}.jpg`);
-        formData.append('caption', message);
-
-        fetch(url, {
-          method: 'POST',
-          body: formData,
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.ok) {
-              console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
-            } else {
-              console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, data);
-            }
-          })
-          .catch((error) => {
-            console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
-          });
+        bot.api.sendPhoto(telegramChatId, new InputFile(blob, `status_camera_${cameraIndex + 1}.jpg`), {
+          caption: message,
+        }).then(() => {
+          console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
+        }).catch((error) => {
+          console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
+        });
       });
     },
-    [telegramBotToken, telegramChatId]
+    [telegramChatId]
   );
 
   const setStatusHandler = useCallback((handler: () => void) => {
     onStatusRequestRef.current = handler;
+    setHasStatusHandler(true);
   }, []);
 
   const resetTelegramSettings = useCallback(() => {
+    // Send off message before resetting
+    if (telegramBotToken && telegramChatId) {
+      const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: telegramChatId,
+          text: "🔴 System is off. Telegram notifications disabled.",
+        }),
+      }).catch((error) => {
+        console.error("Error sending off message:", error);
+      });
+    }
+
     localStorage.removeItem("telegramBotToken");
     localStorage.removeItem("telegramChatId");
     setTelegramBotToken("");
     setTelegramChatId("");
     setBotUsername("");
-  }, []);
+    setHasStatusHandler(false);
+  }, [telegramBotToken, telegramChatId]);
 
   return {
     telegramBotToken,
@@ -213,6 +207,7 @@ export function useTelegram() {
     setDebounceTime,
     sendTelegramMessage,
     sendStatusResponse,
+    sendMessage,
     setStatusHandler,
     botUsername,
     resetTelegramSettings,

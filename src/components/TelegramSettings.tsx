@@ -91,21 +91,26 @@ export function TelegramSettings({
                   </div>
                 </div>
               )}
-              <div className="space-y-2">
-                <Label htmlFor="chat-id" className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  Your Chat ID
-                  {telegramChatId && <CheckCircle className="w-4 h-4 text-green-500" />}
-                </Label>
-                <Input
-                  id="chat-id"
-                  type="text"
-                  placeholder="Will be detected automatically"
-                  value={telegramChatId}
-                  readOnly
-                  className="text-center font-mono"
-                />
-              </div>
+               <div className="space-y-2">
+                 <Label htmlFor="chat-id" className="flex items-center gap-2">
+                   <MessageCircle className="w-4 h-4" />
+                   Your Chat ID
+                   {telegramChatId && <CheckCircle className="w-4 h-4 text-green-500" />}
+                 </Label>
+                 <Input
+                   id="chat-id"
+                   type="text"
+                   placeholder="Will be detected automatically"
+                   value={telegramChatId}
+                   readOnly
+                   className="text-center font-mono"
+                 />
+                 {telegramChatId && (
+                   <p className="text-sm text-muted-foreground">
+                     Send <code className="bg-muted px-1 rounded">/status</code> to your bot to get system status and camera snapshots.
+                   </p>
+                 )}
+               </div>
             </div>
              <div className="space-y-2">
                <Label htmlFor="debounce-time" className="flex items-center gap-2">

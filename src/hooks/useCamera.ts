@@ -4,7 +4,6 @@ import {
   NO_CAMERAS_FOUND_ERROR,
   FAILED_TO_ACCESS_CAMERAS_ERROR,
 } from "../lib/constants";
-import useOpenCv from "./useOpenCv";
 
 export interface CameraHookResult {
   availableDevices: MediaDeviceInfo[];
@@ -20,7 +19,6 @@ export function useCamera(): CameraHookResult {
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const cv = useOpenCv();
 
   const requestCameraAccess = useCallback(async () => {
     setIsLoadingCameras(true);
@@ -65,10 +63,6 @@ export function useCamera(): CameraHookResult {
   }, []);
 
   const captureFrames = useCallback(async (deviceIds: string[]): Promise<{ frame: string; cameraIndex: number }[]> => {
-    if (!cv) {
-      throw new Error("OpenCV not loaded");
-    }
-
     const frames: { frame: string; cameraIndex: number }[] = [];
 
     for (let i = 0; i < deviceIds.length; i++) {
@@ -107,7 +101,7 @@ export function useCamera(): CameraHookResult {
     }
 
     return frames;
-  }, [cv]);
+  }, []);
 
   return {
     availableDevices,

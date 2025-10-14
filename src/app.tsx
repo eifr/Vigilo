@@ -62,6 +62,21 @@ export function App() {
   const isAppReady = cameras.length > 0 && telegramBotToken && telegramChatId;
   const isMotionActive = lastMotionTime && (Date.now() - lastMotionTime.getTime()) < MOTION_ACTIVE_DURATION_MS;
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (telegramBotToken && telegramChatId) {
+        // Note: This may not always send due to page unloading
+        navigator.sendBeacon(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, JSON.stringify({
+          chat_id: telegramChatId,
+          text: "🔴 System is closing.",
+        }));
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [telegramBotToken, telegramChatId]);
+
   const handleAddCamera = useCallback(() => {
     requestCameraAccess();
   }, [requestCameraAccess]);

@@ -102,12 +102,20 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
             }
           }
 
-          diff.delete();
-          thresh.delete();
-          oldGray.delete();
+          try {
+            diff.delete();
+            thresh.delete();
+            oldGray.delete();
+          } catch (error) {
+            console.error('Error deleting OpenCV Mats:', error);
+          }
         }
 
-        frame.delete();
+        try {
+          frame.delete();
+        } catch (error) {
+          console.error('Error deleting frame Mat:', error);
+        }
       } catch (error) {
         console.error("Error in motion detection:", error);
       }
@@ -116,15 +124,23 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
     return () => {
       streaming = false;
       clearInterval(timer);
-      if (capRef.current) {
-        capRef.current.delete();
+      if (capRef.current && typeof capRef.current.delete === 'function') {
+        try {
+          capRef.current.delete();
+        } catch (error) {
+          console.error('Error deleting VideoCapture:', error);
+        }
         capRef.current = null;
       }
       if (video && video.srcObject) {
         (video.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
       }
-      if (prevGrayRef.current) {
-        prevGrayRef.current.delete();
+      if (prevGrayRef.current && typeof prevGrayRef.current.delete === 'function') {
+        try {
+          prevGrayRef.current.delete();
+        } catch (error) {
+          console.error('Error deleting prevGray Mat:', error);
+        }
       }
     };
   }, [deviceId, cv, intervalMs, diffThreshold, motionPixelRatio]);
