@@ -11,7 +11,7 @@ interface CameraListProps {
   onAddCamera: () => void;
   onSelectCamera: (deviceId: string) => void;
   onRemoveCamera: (deviceId: string) => void;
-  onMotion: (deviceId: string, timestamp: Date, frame: string) => void;
+  onMotion: (timestamp: Date, frame: string) => void;
   diffThreshold: number;
   motionPixelRatio: number;
   intervalMs: number;
@@ -89,7 +89,7 @@ export function CameraList({
             </div>
             <CameraMotionDetector
               deviceId={deviceId}
-              onMotion={(...args) => onMotion(deviceId, ...args)}
+              onMotion={(...args) => onMotion(...args)}
               diffThreshold={diffThreshold}
               motionPixelRatio={motionPixelRatio}
               intervalMs={intervalMs}

@@ -62,7 +62,7 @@ export function App() {
   }, [cameras]);
 
   const handleMotion = useCallback(
-    (deviceId: string, timestamp: Date, frame: string) => {
+    (timestamp: Date, frame: string) => {
       if (!sendTelegrams) {
         return;
       }
