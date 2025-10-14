@@ -1,5 +1,5 @@
 import { QRCodeCanvas } from "qrcode.react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { TelegramSetupGuide } from "./TelegramSetupGuide";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,16 +38,16 @@ export function TelegramSettings({
           <CardContent className="space-y-6">
             <TelegramSetupGuide botUsername={botUsername} telegramChatId={telegramChatId} />
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="send-telegrams"
-                  checked={sendTelegrams}
-                  onCheckedChange={setSendTelegrams}
-                />
-                <Label htmlFor="send-telegrams">
-                  Send Telegram message on motion
-                </Label>
-              </div>
+               <div className="flex items-center space-x-2">
+                 <Switch
+                   id="send-telegrams"
+                   checked={sendTelegrams}
+                   onCheckedChange={setSendTelegrams}
+                 />
+                 <Label htmlFor="send-telegrams">
+                   Send Telegram message on motion
+                 </Label>
+               </div>
               <div className="space-y-2">
                 <Label htmlFor="bot-token" className="flex items-center gap-2">
                   <Key className="w-4 h-4" />
