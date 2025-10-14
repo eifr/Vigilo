@@ -12,6 +12,11 @@ export const DEFAULT_DEBOUNCE_TIME_MS = 5000;
 // Motion detection messages
 export const MOTION_DETECTED_MESSAGE_PREFIX = "Movement detected at";
 
+// Status command messages
+export const STATUS_COMMAND = "status";
+export const STATUS_RESPONSE_PREFIX = "System status: All systems operational 🚀";
+export const STATUS_TIMESTAMP_PREFIX = "Captured at";
+
 // Camera settings
 export const CAMERA_PERMISSION_ERROR = "Camera permission denied. Please allow camera access.";
 export const NO_CAMERAS_FOUND_ERROR = "No cameras found.";

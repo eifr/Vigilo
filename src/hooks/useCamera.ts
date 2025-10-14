@@ -4,6 +4,7 @@ import {
   NO_CAMERAS_FOUND_ERROR,
   FAILED_TO_ACCESS_CAMERAS_ERROR,
 } from "../lib/constants";
+import useOpenCv from "./useOpenCv";
 
 export interface CameraHookResult {
   availableDevices: MediaDeviceInfo[];
@@ -12,12 +13,14 @@ export interface CameraHookResult {
   requestCameraAccess: () => Promise<void>;
   addCamera: (deviceId: string) => void;
   clearAvailableDevices: () => void;
+  captureFrames: (deviceIds: string[]) => Promise<{ frame: string; cameraIndex: number }[]>;
 }
 
 export function useCamera(): CameraHookResult {
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const cv = useOpenCv();
 
   const requestCameraAccess = useCallback(async () => {
     setIsLoadingCameras(true);
@@ -61,6 +64,51 @@ export function useCamera(): CameraHookResult {
     setAvailableDevices([]);
   }, []);
 
+  const captureFrames = useCallback(async (deviceIds: string[]): Promise<{ frame: string; cameraIndex: number }[]> => {
+    if (!cv) {
+      throw new Error("OpenCV not loaded");
+    }
+
+    const frames: { frame: string; cameraIndex: number }[] = [];
+
+    for (let i = 0; i < deviceIds.length; i++) {
+      const deviceId = deviceIds[i];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId } }
+        });
+
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.muted = true;
+        await new Promise<void>((resolve) => {
+          video.onloadedmetadata = () => resolve();
+          video.play();
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          ctx.drawImage(video, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg');
+          frames.push({ frame: dataUrl, cameraIndex: i });
+        }
+
+        // Clean up
+        stream.getTracks().forEach(track => track.stop());
+        video.remove();
+        canvas.remove();
+      } catch (error) {
+        console.error(`Error capturing frame from camera ${i + 1}:`, error);
+      }
+    }
+
+    return frames;
+  }, [cv]);
+
   return {
     availableDevices,
     isLoadingCameras,
@@ -68,5 +116,6 @@ export function useCamera(): CameraHookResult {
     requestCameraAccess,
     addCamera,
     clearAvailableDevices,
+    captureFrames,
   };
 }

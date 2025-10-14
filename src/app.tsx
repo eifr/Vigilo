@@ -22,6 +22,15 @@ import {
 
 export function App() {
   const { theme, setTheme } = useTheme();
+  const [cameras, setCameras] = useState<string[]>([]);
+  const [showCameras, setShowCameras] = useState(true);
+  const [lastMotionTime, setLastMotionTime] = useState<Date | null>(null);
+  const [diffThreshold, setDiffThreshold] = useState(DEFAULT_DIFF_THRESHOLD);
+  const [motionPixelRatio, setMotionPixelRatio] = useState(DEFAULT_MOTION_PIXEL_RATIO);
+  const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
+
+  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera, captureFrames } = useCamera();
+
   const {
     telegramBotToken,
     setTelegramBotToken,
@@ -31,17 +40,23 @@ export function App() {
     debounceTime,
     setDebounceTime,
     sendTelegramMessage,
+    sendStatusResponse,
+    setStatusHandler,
     botUsername,
   } = useTelegram();
-  const [cameras, setCameras] = useState<string[]>([]);
-  const [showCameras, setShowCameras] = useState(true);
-  const [lastMotionTime, setLastMotionTime] = useState<Date | null>(null);
-  const [diffThreshold, setDiffThreshold] = useState(DEFAULT_DIFF_THRESHOLD);
-  const [motionPixelRatio, setMotionPixelRatio] = useState(DEFAULT_MOTION_PIXEL_RATIO);
-  const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
 
-  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } = useCamera();
+  const handleStatusRequest = useCallback(async () => {
+    try {
+      const frames = await captureFrames(cameras);
+      sendStatusResponse(frames);
+    } catch (error) {
+      console.error("Error handling status request:", error);
+    }
+  }, [cameras, captureFrames, sendStatusResponse]);
 
+  useEffect(() => {
+    setStatusHandler(handleStatusRequest);
+  }, [setStatusHandler, handleStatusRequest]);
 
   const isAppReady = cameras.length > 0 && telegramBotToken && telegramChatId;
   const isMotionActive = lastMotionTime && (Date.now() - lastMotionTime.getTime()) < MOTION_ACTIVE_DURATION_MS;
