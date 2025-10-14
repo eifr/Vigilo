@@ -43,6 +43,7 @@ export function App() {
     sendStatusResponse,
     setStatusHandler,
     botUsername,
+    resetTelegramSettings,
   } = useTelegram();
 
   const handleStatusRequest = useCallback(async () => {
@@ -179,6 +180,7 @@ export function App() {
                 debounceTime={debounceTime}
                 setDebounceTime={setDebounceTime}
                 botUsername={botUsername}
+                resetTelegramSettings={resetTelegramSettings}
               />
               <MotionSensitivitySettings
                 diffThreshold={diffThreshold}

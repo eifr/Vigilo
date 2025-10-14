@@ -4,13 +4,26 @@ import { dataUrlToBlob } from "../lib/utils";
 import { MOTION_DETECTED_MESSAGE_PREFIX, STATUS_COMMAND, STATUS_RESPONSE_PREFIX, STATUS_TIMESTAMP_PREFIX } from "../lib/constants";
 
 export function useTelegram() {
-  const [telegramBotToken, setTelegramBotToken] = useState("");
-  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramBotToken, setTelegramBotToken] = useState(() => {
+    return localStorage.getItem("telegramBotToken") || "";
+  });
+  const [telegramChatId, setTelegramChatId] = useState(() => {
+    return localStorage.getItem("telegramChatId") || "";
+  });
   const [sendTelegrams, setSendTelegrams] = useState(false);
   const [debounceTime, setDebounceTime] = useState(5000);
   const [botUsername, setBotUsername] = useState("");
   const botRef = useRef<Bot | null>(null);
   const onStatusRequestRef = useRef<(() => void) | null>(null);
+
+  // Persist to localStorage
+  useEffect(() => {
+    localStorage.setItem("telegramBotToken", telegramBotToken);
+  }, [telegramBotToken]);
+
+  useEffect(() => {
+    localStorage.setItem("telegramChatId", telegramChatId);
+  }, [telegramChatId]);
 
   useEffect(() => {
     if (botRef.current) {
@@ -182,6 +195,14 @@ export function useTelegram() {
     onStatusRequestRef.current = handler;
   }, []);
 
+  const resetTelegramSettings = useCallback(() => {
+    localStorage.removeItem("telegramBotToken");
+    localStorage.removeItem("telegramChatId");
+    setTelegramBotToken("");
+    setTelegramChatId("");
+    setBotUsername("");
+  }, []);
+
   return {
     telegramBotToken,
     setTelegramBotToken,
@@ -194,5 +215,6 @@ export function useTelegram() {
     sendStatusResponse,
     setStatusHandler,
     botUsername,
+    resetTelegramSettings,
   };
 }

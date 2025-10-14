@@ -4,7 +4,8 @@ import { TelegramSetupGuide } from "./TelegramSetupGuide";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Key, MessageCircle, Clock, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Key, MessageCircle, Clock, CheckCircle, RotateCcw } from "lucide-react";
 
 interface TelegramSettingsProps {
   sendTelegrams: boolean;
@@ -15,6 +16,7 @@ interface TelegramSettingsProps {
   debounceTime: number;
   setDebounceTime: (value: number) => void;
   botUsername: string;
+  resetTelegramSettings: () => void;
 }
 
 export function TelegramSettings({
@@ -26,6 +28,7 @@ export function TelegramSettings({
   debounceTime,
   setDebounceTime,
   botUsername,
+  resetTelegramSettings,
 }: TelegramSettingsProps) {
   return (
         <Card className="w-full max-w-md mx-auto">
@@ -104,23 +107,31 @@ export function TelegramSettings({
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="debounce-time" className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Debounce Time (ms)
-              </Label>
-              <Input
-                id="debounce-time"
-                type="number"
-                value={debounceTime}
-                onInput={(e) =>
-                  setDebounceTime(
-                    parseInt((e.target as HTMLInputElement).value, 10)
-                  )
-                }
-              />
-            </div>
-          </CardContent>
+             <div className="space-y-2">
+               <Label htmlFor="debounce-time" className="flex items-center gap-2">
+                 <Clock className="w-4 h-4" />
+                 Debounce Time (ms)
+               </Label>
+               <Input
+                 id="debounce-time"
+                 type="number"
+                 value={debounceTime}
+                 onInput={(e) =>
+                   setDebounceTime(
+                     parseInt((e.target as HTMLInputElement).value, 10)
+                   )
+                 }
+               />
+             </div>
+             <Button
+               onClick={resetTelegramSettings}
+               variant="outline"
+               className="w-full"
+             >
+               <RotateCcw className="w-4 h-4 mr-2" />
+               Reset Telegram Settings
+             </Button>
+           </CardContent>
         </Card>
   );
 }
