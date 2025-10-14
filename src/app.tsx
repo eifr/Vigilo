@@ -91,6 +91,8 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [theme, showCameras, handleAddCamera]);
 
+
+
   return (
     <div class="min-h-screen w-full max-w-7xl mx-auto p-2 sm:p-4">
       <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4 p-4 bg-card rounded-lg shadow-sm">
