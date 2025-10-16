@@ -12,7 +12,7 @@ interface TelegramSettingsProps {
   setSendTelegrams: (value: boolean) => void;
   telegramBotToken: string;
   setTelegramBotToken: (value: string) => void;
-  telegramChatId: string;
+  telegramChatId: number;
   debounceTime: number;
   setDebounceTime: (value: number) => void;
   botUsername: string;
@@ -97,14 +97,14 @@ export function TelegramSettings({
                    Your Chat ID
                    {telegramChatId && <CheckCircle className="w-4 h-4 text-green-500" />}
                  </Label>
-                 <Input
-                   id="chat-id"
-                   type="text"
-                   placeholder="Will be detected automatically"
-                   value={telegramChatId}
-                   readOnly
-                   className="text-center font-mono"
-                 />
+                  <Input
+                    id="chat-id"
+                    type="text"
+                    placeholder="Will be detected automatically"
+                    value={telegramChatId.toString()}
+                    readOnly
+                    className="text-center font-mono"
+                  />
                  {telegramChatId && (
                    <p className="text-sm text-muted-foreground">
                      Send <code className="bg-muted px-1 rounded">/status</code> to your bot to get system status and camera snapshots.

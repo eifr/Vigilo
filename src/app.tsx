@@ -29,7 +29,7 @@ export function App() {
   const [motionPixelRatio, setMotionPixelRatio] = useState(DEFAULT_MOTION_PIXEL_RATIO);
   const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
 
-  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera, captureFrames } = useCamera();
+  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } = useCamera();
 
   const {
     telegramBotToken,
@@ -48,12 +48,25 @@ export function App() {
 
   const handleStatusRequest = useCallback(async () => {
     try {
-      const frames = await captureFrames(cameras);
-      sendStatusResponse(frames);
+      // Create dummy frame for testing
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.fillText('Test Image', 200, 240);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const frames = [{ frame: dataUrl, cameraIndex: 0 }];
+        sendStatusResponse(frames);
+      }
     } catch (error) {
       console.error("Error handling status request:", error);
     }
-  }, [cameras, captureFrames, sendStatusResponse]);
+  }, [sendStatusResponse]);
 
   useEffect(() => {
     setStatusHandler(handleStatusRequest);

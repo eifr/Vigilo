@@ -80,14 +80,20 @@ export function useCamera(): CameraHookResult {
           video.play();
         });
 
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+        if (width > 1280) {
+          height = Math.round((height * 1280) / width);
+          width = 1280;
+        }
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = width;
+        canvas.height = height;
         const ctx = canvas.getContext('2d');
 
         if (ctx) {
-          ctx.drawImage(video, 0, 0);
-          const dataUrl = canvas.toDataURL('image/jpeg');
+          ctx.drawImage(video, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
           frames.push({ frame: dataUrl, cameraIndex: i });
         }
 

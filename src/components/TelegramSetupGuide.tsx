@@ -3,7 +3,7 @@ import { ChevronDown, CheckCircle, Circle } from "lucide-react";
 
 interface TelegramSetupGuideProps {
   botUsername?: string;
-  telegramChatId?: string;
+  telegramChatId?: number;
 }
 
 export function TelegramSetupGuide({ botUsername, telegramChatId }: TelegramSetupGuideProps) {

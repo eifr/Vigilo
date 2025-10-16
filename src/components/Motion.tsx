@@ -54,10 +54,16 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
       });
 
     const handleLoadedMetadata = () => {
-      video.width = video.videoWidth;
-      video.height = video.videoHeight;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      let width = video.videoWidth;
+      let height = video.videoHeight;
+      if (width > 1280) {
+        height = Math.round((height * 1280) / width);
+        width = 1280;
+      }
+      video.width = width;
+      video.height = height;
+      canvas.width = width;
+      canvas.height = height;
       capRef.current = new cv.VideoCapture(video);
       streaming = true;
     };
@@ -88,19 +94,19 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
           const total = video.videoWidth * video.videoHeight;
           const ratio = nonZero / total;
 
-          if (ratio > motionPixelRatio) {
-            if (import.meta.env.DEV) {
-              console.log("Motion detected at:", new Date());
+            if (ratio > motionPixelRatio) {
+              if (import.meta.env.DEV) {
+                console.log("Motion detected at:", new Date());
+              }
+              setIsMotionDetected(true);
+              setTimeout(() => setIsMotionDetected(false), 500);
+              const canvas = canvasRef.current;
+              if (canvas && ctx && video.readyState === 4 && !video.paused) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                onMotionRef.current(new Date(), dataUrl);
+              }
             }
-            setIsMotionDetected(true);
-            setTimeout(() => setIsMotionDetected(false), 500);
-            const canvas = canvasRef.current;
-            if (canvas && ctx && video.readyState === 4 && !video.paused) {
-              ctx.drawImage(video, 0, 0);
-              const dataUrl = canvas.toDataURL("image/jpeg");
-              onMotionRef.current(new Date(), dataUrl);
-            }
-          }
 
           try {
             diff.delete();

@@ -7,8 +7,9 @@ export function useTelegram() {
   const [telegramBotToken, setTelegramBotToken] = useState(() => {
     return localStorage.getItem("telegramBotToken") || "";
   });
-  const [telegramChatId, setTelegramChatId] = useState(() => {
-    return localStorage.getItem("telegramChatId") || "";
+  const [telegramChatId, setTelegramChatId] = useState<number>(() => {
+    const stored = localStorage.getItem("telegramChatId");
+    return stored ? Number(stored) : 0;
   });
   const [sendTelegrams, setSendTelegrams] = useState(false);
   const [debounceTime, setDebounceTime] = useState(5000);
@@ -23,7 +24,7 @@ export function useTelegram() {
   }, [telegramBotToken]);
 
   useEffect(() => {
-    localStorage.setItem("telegramChatId", telegramChatId);
+    localStorage.setItem("telegramChatId", telegramChatId.toString());
   }, [telegramChatId]);
 
   useEffect(() => {
@@ -53,7 +54,7 @@ export function useTelegram() {
     if (!telegramChatId) {
       bot.on("message", (ctx) => {
         console.log(ctx);
-        const chatId = ctx.message.chat.id.toString();
+        const chatId = ctx.message.chat.id;
         setTelegramChatId(chatId);
         // Send operational message
         bot.api.sendMessage(chatId, "🚀 System is operational! You can now send /status to get system status and camera snapshots.").catch((error) => {
@@ -72,12 +73,13 @@ export function useTelegram() {
         .catch((err) => {
           console.error("Error with bot polling:", err);
         });
-    } else if (hasStatusHandler) {
-      // Listen for status command when chat ID is set
-      bot.command(STATUS_COMMAND, () => {
-        console.log("Status command received");
-        onStatusRequestRef.current?.();
-      });
+     } else if (hasStatusHandler) {
+       console.log("Registering status command");
+       // Listen for status command when chat ID is set
+       bot.command(STATUS_COMMAND, () => {
+         console.log("Status command received");
+         onStatusRequestRef.current?.();
+       });
 
       bot.start().catch((err) => {
         console.error("Error starting bot for status commands:", err);
@@ -109,15 +111,19 @@ export function useTelegram() {
 
       const message = `${MOTION_DETECTED_MESSAGE_PREFIX} ${new Date().toLocaleTimeString()}`;
 
-      const blob = dataUrlToBlob(frame);
-
-      botRef.current.api.sendPhoto(telegramChatId, new InputFile(blob, 'motion.jpg'), {
+       const blob = dataUrlToBlob(frame);
+       console.log("Sending photo to chat_id:", telegramChatId);
+       botRef.current.api.sendPhoto(telegramChatId, new InputFile(blob, 'motion.jpg'), {
         caption: message,
       }).then(() => {
         console.log("Telegram photo sent successfully");
-      }).catch((error) => {
-        console.error("Error sending Telegram photo:", error);
-      });
+       }).catch((error) => {
+         console.error("Error sending Telegram photo:", error);
+         console.error("Error details:", error.response || error);
+         if (error.error_code) {
+           console.error("Error code:", error.error_code, "Description:", error.description);
+         }
+       });
     },
     [sendTelegrams, telegramChatId, debounceTime]
   );
@@ -152,15 +158,19 @@ export function useTelegram() {
       frames.forEach(({ frame, cameraIndex }) => {
         const message = `${STATUS_TIMESTAMP_PREFIX} ${new Date().toLocaleTimeString()} - Camera ${cameraIndex + 1}`;
 
-        const blob = dataUrlToBlob(frame);
-
-        bot.api.sendPhoto(telegramChatId, new InputFile(blob, `status_camera_${cameraIndex + 1}.jpg`), {
+         const blob = dataUrlToBlob(frame);
+         console.log("Sending status photo to chat_id:", telegramChatId);
+         bot.api.sendPhoto(telegramChatId, new InputFile(blob, `status_camera_${cameraIndex + 1}.jpg`), {
           caption: message,
         }).then(() => {
           console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
-        }).catch((error) => {
-          console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
-        });
+         }).catch((error) => {
+           console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
+           console.error("Error details:", error.response || error);
+           if (error.error_code) {
+             console.error("Error code:", error.error_code, "Description:", error.description);
+           }
+         });
       });
     },
     [telegramChatId]
@@ -191,8 +201,7 @@ export function useTelegram() {
 
     localStorage.removeItem("telegramBotToken");
     localStorage.removeItem("telegramChatId");
-    setTelegramBotToken("");
-    setTelegramChatId("");
+    setTelegramChatId(0);
     setBotUsername("");
     setHasStatusHandler(false);
   }, [telegramBotToken, telegramChatId]);
