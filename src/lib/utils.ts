@@ -9,7 +9,14 @@ export function cn(...inputs: ClassValue[]) {
  * Converts a data URL to a Blob object
  */
 export function dataUrlToBlob(dataUrl: string): Blob {
-  const byteString = atob(dataUrl.split(",")[1]);
+  if (!dataUrl || !dataUrl.startsWith("data:")) {
+    throw new Error("Invalid data URL");
+  }
+  const parts = dataUrl.split(",");
+  if (parts.length !== 2) {
+    throw new Error("Invalid data URL format");
+  }
+  const byteString = atob(parts[1]);
   const ab = new ArrayBuffer(byteString.length);
   const ia = new Uint8Array(ab);
   for (let i = 0; i < byteString.length; i++) {

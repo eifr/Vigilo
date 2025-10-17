@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
-import { Bot, InputFile } from "grammy";
+import { Bot } from "grammy";
 import { dataUrlToBlob } from "../lib/utils";
 import { MOTION_DETECTED_MESSAGE_PREFIX, STATUS_COMMAND, STATUS_RESPONSE_PREFIX, STATUS_TIMESTAMP_PREFIX } from "../lib/constants";
 
@@ -111,19 +111,42 @@ export function useTelegram() {
 
       const message = `${MOTION_DETECTED_MESSAGE_PREFIX} ${new Date().toLocaleTimeString()}`;
 
-       const blob = dataUrlToBlob(frame);
+       let blob: Blob;
+       try {
+         blob = dataUrlToBlob(frame);
+       } catch (error) {
+         console.error("Error converting data URL to blob:", error);
+         return;
+       }
+       console.log("Blob size:", blob.size, "Blob type:", blob.type);
+       if (blob.size === 0) {
+         console.error("Blob is empty, not sending photo");
+         return;
+       }
        console.log("Sending photo to chat_id:", telegramChatId);
-       botRef.current.api.sendPhoto(telegramChatId, new InputFile(blob, 'motion.jpg'), {
-        caption: message,
-      }).then(() => {
-        console.log("Telegram photo sent successfully");
-       }).catch((error) => {
-         console.error("Error sending Telegram photo:", error);
-         console.error("Error details:", error.response || error);
-         if (error.error_code) {
-           console.error("Error code:", error.error_code, "Description:", error.description);
-         }
-       });
+       const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+       const formData = new FormData();
+       formData.append('chat_id', telegramChatId.toString());
+       formData.append('photo', blob, 'motion.jpg');
+       formData.append('caption', message);
+       fetch(url, {
+         method: 'POST',
+         body: formData,
+       })
+         .then((res) => res.json())
+         .then((data) => {
+           if (!data.ok) {
+             throw new Error(`Telegram API error: ${data.error_code} - ${data.description}`);
+           }
+           console.log("Telegram photo sent successfully");
+         })
+         .catch((error) => {
+           console.error("Error sending Telegram photo:", error);
+           // Check if it's a CORS or network error
+           if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+             console.error("Possible CORS or network issue. Telegram Bot API should be called from server-side.");
+           }
+         });
     },
     [sendTelegrams, telegramChatId, debounceTime]
   );
@@ -154,24 +177,47 @@ export function useTelegram() {
         console.error("Error sending status message:", error);
       });
 
-      // Send photos for each camera
-      frames.forEach(({ frame, cameraIndex }) => {
-        const message = `${STATUS_TIMESTAMP_PREFIX} ${new Date().toLocaleTimeString()} - Camera ${cameraIndex + 1}`;
+       // Send photos for each camera
+       frames.forEach(({ frame, cameraIndex }) => {
+         const message = `${STATUS_TIMESTAMP_PREFIX} ${new Date().toLocaleTimeString()} - Camera ${cameraIndex + 1}`;
 
-         const blob = dataUrlToBlob(frame);
-         console.log("Sending status photo to chat_id:", telegramChatId);
-         bot.api.sendPhoto(telegramChatId, new InputFile(blob, `status_camera_${cameraIndex + 1}.jpg`), {
-          caption: message,
-        }).then(() => {
-          console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
-         }).catch((error) => {
-           console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
-           console.error("Error details:", error.response || error);
-           if (error.error_code) {
-             console.error("Error code:", error.error_code, "Description:", error.description);
-           }
-         });
-      });
+          let blob: Blob;
+          try {
+            blob = dataUrlToBlob(frame);
+          } catch (error) {
+            console.error(`Error converting data URL to blob for camera ${cameraIndex + 1}:`, error);
+            return;
+          }
+          console.log("Blob size:", blob.size, "Blob type:", blob.type);
+          if (blob.size === 0) {
+            console.error(`Blob for camera ${cameraIndex + 1} is empty, not sending photo`);
+            return;
+          }
+          console.log("Sending status photo to chat_id:", telegramChatId);
+          const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+          const formData = new FormData();
+          formData.append('chat_id', telegramChatId.toString());
+          formData.append('photo', blob, `status_camera_${cameraIndex + 1}.jpg`);
+          formData.append('caption', message);
+          fetch(url, {
+            method: 'POST',
+            body: formData,
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (!data.ok) {
+                throw new Error(`Telegram API error: ${data.error_code} - ${data.description}`);
+              }
+              console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
+            })
+            .catch((error) => {
+              console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
+              // Check if it's a CORS or network error
+              if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                console.error("Possible CORS or network issue. Telegram Bot API should be called from server-side.");
+              }
+            });
+       });
     },
     [telegramChatId]
   );
