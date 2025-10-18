@@ -16,10 +16,6 @@ Turn any device with a camera into a portable security system! 🛡️ This slic
     ```
 3.  Install the dependencies:
     ```bash
-    npm install
-    # or
-    yarn install
-    # or
     bun install
     ```
 
@@ -27,16 +23,16 @@ Turn any device with a camera into a portable security system! 🛡️ This slic
 
 In the project directory, you can run:
 
-### `npm run dev`
+### `bun run dev`
 
 Runs the app in the development mode.
 Open [http://localhost:5173](http://localhost:5173) to view it in the browser. The page will reload if you make edits.
 
-### `npm run build`
+### `bun run build`
 
 Builds the app for production to the `dist` folder. It correctly bundles Preact in production mode and optimizes the build for the best performance.
 
-### `npm run preview`
+### `bun run preview`
 
 Serves the production build locally to preview it before deploying.
 
