@@ -12,6 +12,7 @@ interface CameraListProps {
   onSelectCamera: (deviceId: string) => void;
   onRemoveCamera: (deviceId: string) => void;
   onMotion: (timestamp: Date, frame: string) => void;
+  onLatestFrame: (deviceId: string, frame: string) => void;
   diffThreshold: number;
   motionPixelRatio: number;
   intervalMs: number;
@@ -27,6 +28,7 @@ export function CameraList({
   onSelectCamera,
   onRemoveCamera,
   onMotion,
+  onLatestFrame,
   diffThreshold,
   motionPixelRatio,
   intervalMs,
@@ -87,14 +89,15 @@ export function CameraList({
               <Camera className="w-4 h-4" />
               <span className="text-sm font-medium">Camera {index + 1}</span>
             </div>
-            <CameraMotionDetector
-              deviceId={deviceId}
-              onMotion={(...args) => onMotion(...args)}
-              diffThreshold={diffThreshold}
-              motionPixelRatio={motionPixelRatio}
-              intervalMs={intervalMs}
-              hidePreview={!showCameras}
-            />
+             <CameraMotionDetector
+               deviceId={deviceId}
+               onMotion={(...args) => onMotion(...args)}
+               onLatestFrame={(frame) => onLatestFrame(deviceId, frame)}
+               diffThreshold={diffThreshold}
+               motionPixelRatio={motionPixelRatio}
+               intervalMs={intervalMs}
+               hidePreview={!showCameras}
+             />
             <Button
               variant="destructive"
               onClick={() => onRemoveCamera(deviceId)}

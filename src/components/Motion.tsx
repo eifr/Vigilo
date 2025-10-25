@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react";
 interface MotionWithOverlayProps {
   deviceId: string;
   onMotion?: (timestamp: Date, frame: string) => void;
+  onLatestFrame?: (frame: string) => void;
   diffThreshold?: number;
   motionPixelRatio?: number;
   intervalMs?: number;
@@ -16,6 +17,7 @@ interface MotionWithOverlayProps {
 export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
   deviceId,
   onMotion = (ts, frame) => console.log("Motion at:", ts, "frame:", frame),
+  onLatestFrame,
   diffThreshold = 30,
   motionPixelRatio = 0.02,
   intervalMs = 200,
@@ -94,16 +96,17 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
           const total = video.videoWidth * video.videoHeight;
           const ratio = nonZero / total;
 
-            if (ratio > motionPixelRatio) {
-              if (import.meta.env.DEV) {
-                console.log("Motion detected at:", new Date());
-              }
-              setIsMotionDetected(true);
-              setTimeout(() => setIsMotionDetected(false), 500);
-              const canvas = canvasRef.current;
-              if (canvas && ctx && video.readyState === 4 && !video.paused) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            const canvas = canvasRef.current;
+            if (canvas && ctx && video.readyState === 4 && !video.paused) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+              onLatestFrame?.(dataUrl);
+              if (ratio > motionPixelRatio) {
+                if (import.meta.env.DEV) {
+                  console.log("Motion detected at:", new Date());
+                }
+                setIsMotionDetected(true);
+                setTimeout(() => setIsMotionDetected(false), 500);
                 onMotionRef.current(new Date(), dataUrl);
               }
             }

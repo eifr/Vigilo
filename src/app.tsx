@@ -28,8 +28,13 @@ export function App() {
   const [diffThreshold, setDiffThreshold] = useState(DEFAULT_DIFF_THRESHOLD);
   const [motionPixelRatio, setMotionPixelRatio] = useState(DEFAULT_MOTION_PIXEL_RATIO);
   const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
+  const [latestFrames, setLatestFrames] = useState<Record<string, string>>({});
 
   const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } = useCamera();
+
+  const updateLatestFrame = useCallback((deviceId: string, frame: string) => {
+    setLatestFrames(prev => ({ ...prev, [deviceId]: frame }));
+  }, []);
 
   const {
     telegramBotToken,
@@ -48,25 +53,32 @@ export function App() {
 
   const handleStatusRequest = useCallback(async () => {
     try {
-      // Create dummy frame for testing
-      const canvas = document.createElement('canvas');
-      canvas.width = 640;
-      canvas.height = 480;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(0, 0, 640, 480);
-        ctx.fillStyle = 'white';
-        ctx.font = '30px Arial';
-        ctx.fillText('Test Image', 200, 240);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        const frames = [{ frame: dataUrl, cameraIndex: 0 }];
+      const frames = cameras.map((deviceId, index) => ({
+        frame: latestFrames[deviceId] || '',
+        cameraIndex: index
+      })).filter(f => f.frame);
+      if (frames.length > 0) {
         sendStatusResponse(frames);
+      } else {
+        // Fallback to dummy if no frames
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 480;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = 'red';
+          ctx.fillRect(0, 0, 640, 480);
+          ctx.fillStyle = 'white';
+          ctx.font = '30px Arial';
+          ctx.fillText('No camera frames available', 150, 240);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          sendStatusResponse([{ frame: dataUrl, cameraIndex: 0 }]);
+        }
       }
     } catch (error) {
       console.error("Error handling status request:", error);
     }
-  }, [sendStatusResponse]);
+  }, [cameras, latestFrames, sendStatusResponse]);
 
   useEffect(() => {
     setStatusHandler(handleStatusRequest);
@@ -103,6 +115,11 @@ export function App() {
 
   const handleRemoveCamera = useCallback((deviceId: string) => {
     setCameras(cameras.filter((id) => id !== deviceId));
+    setLatestFrames(prev => {
+      const newFrames = { ...prev };
+      delete newFrames[deviceId];
+      return newFrames;
+    });
   }, [cameras]);
 
   const handleMotion = useCallback(
@@ -231,20 +248,21 @@ export function App() {
               <CardTitle>Cameras</CardTitle>
             </CardHeader>
             <CardContent>
-              <CameraList
-                cameras={cameras}
-                availableDevices={availableDevices}
-                isLoadingCameras={isLoadingCameras}
-                cameraError={cameraError}
-                onAddCamera={handleAddCamera}
-                onSelectCamera={handleSelectCamera}
-                onRemoveCamera={handleRemoveCamera}
-                onMotion={handleMotion}
-                diffThreshold={diffThreshold}
-                motionPixelRatio={motionPixelRatio}
-                intervalMs={intervalMs}
-                showCameras={showCameras}
-              />
+               <CameraList
+                 cameras={cameras}
+                 availableDevices={availableDevices}
+                 isLoadingCameras={isLoadingCameras}
+                 cameraError={cameraError}
+                 onAddCamera={handleAddCamera}
+                 onSelectCamera={handleSelectCamera}
+                 onRemoveCamera={handleRemoveCamera}
+                 onMotion={handleMotion}
+                 onLatestFrame={updateLatestFrame}
+                 diffThreshold={diffThreshold}
+                 motionPixelRatio={motionPixelRatio}
+                 intervalMs={intervalMs}
+                 showCameras={showCameras}
+               />
             </CardContent>
           </Card>
         </motion.div>
