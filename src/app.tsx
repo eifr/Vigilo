@@ -5,6 +5,7 @@ import { MotionSensitivitySettings } from "./components/MotionSensitivitySetting
 import { CameraList } from "./components/CameraList";
 import { useTelegram } from "./hooks/useTelegram";
 import { useCamera } from "./hooks/useCamera";
+import { useSyncQueue } from "./hooks/useSyncQueue";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,8 @@ import { motion } from "motion/react";
 import { useTheme } from "./hooks/useTheme";
 import logo from "./assets/logo.svg";
 import { Github, Eye, EyeOff, Sun, Moon, Activity, CheckCircle, AlertCircle } from "lucide-react";
+import { OfflineStatusBanner } from "./components/OfflineStatus";
+import { MonitoringStats, QuickConfig } from "./components/QuickSettings";
 import {
   MOTION_ACTIVE_DURATION_MS,
   DEFAULT_DIFF_THRESHOLD,
@@ -36,20 +39,32 @@ export function App() {
     setLatestFrames(prev => ({ ...prev, [deviceId]: frame }));
   }, []);
 
-  const {
-    telegramBotToken,
-    setTelegramBotToken,
-    telegramChatId,
-    sendTelegrams,
-    setSendTelegrams,
-    debounceTime,
-    setDebounceTime,
-    sendTelegramMessage,
-    sendStatusResponse,
-    setStatusHandler,
-    botUsername,
-    resetTelegramSettings,
-  } = useTelegram();
+const {
+     telegramBotToken,
+     setTelegramBotToken,
+     telegramChatId,
+     sendTelegrams,
+     setSendTelegrams,
+     debounceTime,
+     setDebounceTime,
+     sendTelegramMessage,
+     sendStatusResponse,
+     setStatusHandler,
+     botUsername,
+     resetTelegramSettings,
+   } = useTelegram();
+
+   const {
+     syncStatus,
+     tryImmediateSend,
+     queueEventOffline,
+     flushQueue,
+     retryFailedEvents,
+     clearFailedEvents,
+   } = useSyncQueue({
+     telegramBotToken: telegramBotToken || '',
+     telegramChatId: telegramChatId?.toString() || '',
+   });
 
   const handleStatusRequest = useCallback(async () => {
     try {
@@ -123,14 +138,38 @@ export function App() {
   }, [cameras]);
 
   const handleMotion = useCallback(
-    (timestamp: Date, frame: string) => {
+    async (timestamp: Date, frame: string, deviceId: string) => {
       if (!sendTelegrams) {
         return;
       }
-      sendTelegramMessage(frame);
+      
+      const timestampMs = timestamp.getTime();
+      let sentSuccessfully = false;
+      
+      // Try immediate send first (Online-First approach)
+      try {
+        sentSuccessfully = await tryImmediateSend(frame, timestampMs);
+      } catch (error) {
+        console.error('Immediate send failed:', error);
+        sentSuccessfully = false;
+      }
+      
+      // If immediate send failed, queue for offline storage
+      if (!sentSuccessfully) {
+        try {
+          await queueEventOffline(deviceId, frame, timestampMs, {
+            diffThreshold,
+            motionPixelRatio,
+          });
+          console.log('Event queued due to offline/connection failure');
+        } catch (error) {
+          console.error('Error queuing movement event:', error);
+        }
+      }
+      
       setLastMotionTime(timestamp);
     },
-    [sendTelegrams, sendTelegramMessage]
+    [sendTelegrams, tryImmediateSend, queueEventOffline, diffThreshold, motionPixelRatio]
   );
 
   useEffect(() => {
@@ -154,9 +193,14 @@ export function App() {
 
 
 
-  return (
-    <div class="min-h-screen w-full max-w-7xl mx-auto p-2 sm:p-4">
-      <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4 p-4 bg-card rounded-lg shadow-sm">
+return (
+     <div class="min-h-screen w-full max-w-7xl mx-auto p-2 sm:p-4">
+       <OfflineStatusBanner 
+         syncStatus={syncStatus}
+         onRetrySync={syncStatus.wasOffline ? flushQueue : retryFailedEvents}
+         onClearFailed={clearFailedEvents}
+       />
+       <header class="flex flex-col sm:flex-row items-center justify-between w-full mb-8 gap-4 p-4 bg-card rounded-lg shadow-sm">
         <div class="flex items-center gap-3">
           <img src={logo} alt="Vigilo Logo" class="logo" />
           <h1 class="text-2xl font-bold">Vigilo</h1>
@@ -205,7 +249,7 @@ export function App() {
         </div>
       </header>
 
-      <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -265,6 +309,33 @@ export function App() {
                />
             </CardContent>
           </Card>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          class="lg:col-span-1"
+        >
+          <div class="space-y-6">
+            <MonitoringStats
+              isActive={isMotionActive}
+              eventsToday={syncStatus.pendingCount}
+              lastEvent={lastMotionTime || undefined}
+              camerasActive={cameras.length}
+            />
+            <QuickConfig
+              debounceTime={debounceTime}
+              setDebounceTime={setDebounceTime}
+              sensitivityLevel={motionPixelRatio > 0.05 ? 'high' : motionPixelRatio > 0.02 ? 'medium' : 'low'}
+              setSensitivityLevel={(level) => {
+                switch(level) {
+                  case 'low': setMotionPixelRatio(0.01); break;
+                  case 'medium': setMotionPixelRatio(0.03); break;
+                  case 'high': setMotionPixelRatio(0.08); break;
+                }
+              }}
+            />
+          </div>
         </motion.div>
       </main>
       <footer class="text-center p-4 text-sm text-muted-foreground space-y-2">

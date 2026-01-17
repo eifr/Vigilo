@@ -6,7 +6,7 @@ import { AlertTriangle } from "lucide-react";
 
 interface MotionWithOverlayProps {
   deviceId: string;
-  onMotion?: (timestamp: Date, frame: string) => void;
+  onMotion?: (timestamp: Date, frame: string, deviceId: string) => void;
   onLatestFrame?: (frame: string) => void;
   diffThreshold?: number;
   motionPixelRatio?: number;
@@ -16,7 +16,7 @@ interface MotionWithOverlayProps {
 
 export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
   deviceId,
-  onMotion = (ts, frame) => console.log("Motion at:", ts, "frame:", frame),
+  onMotion = (ts, frame, deviceId) => console.log("Motion at:", ts, "frame:", frame, "deviceId:", deviceId),
   onLatestFrame,
   diffThreshold = 30,
   motionPixelRatio = 0.02,
@@ -99,7 +99,50 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
             const canvas = canvasRef.current;
             if (canvas && ctx && video.readyState === 4 && !video.paused) {
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+              
+              // Compress image more aggressively for Telegram compatibility
+              // Reduce size to max 640x480 and use lower quality
+              const maxWidth = 640;
+              const maxHeight = 480;
+              let width = canvas.width;
+              let height = canvas.height;
+              let dataUrl: string;
+
+              if (width > maxWidth || height > maxHeight) {
+                const aspectRatio = width / height;
+                if (width > height) {
+                  width = maxWidth;
+                  height = Math.round(maxWidth / aspectRatio);
+                } else {
+                  height = maxHeight;
+                  width = Math.round(maxHeight * aspectRatio);
+                }
+
+                // Create a smaller canvas for resizing
+                const resizeCanvas = document.createElement('canvas');
+                const resizeCtx = resizeCanvas.getContext('2d');
+                if (resizeCtx) {
+                  resizeCanvas.width = width;
+                  resizeCanvas.height = height;
+                  resizeCtx.drawImage(canvas, 0, 0, width, height);
+                  dataUrl = resizeCanvas.toDataURL("image/jpeg", 0.6);
+                } else {
+                  dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+                }
+              } else {
+                dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+              }
+
+              onLatestFrame?.(dataUrl);
+              
+              if (ratio > motionPixelRatio) {
+                if (import.meta.env.DEV) {
+                  console.log("Motion detected at:", new Date(), "Final size:", width + "x" + height, "Data URL length:", dataUrl.length);
+                }
+                setIsMotionDetected(true);
+                setTimeout(() => setIsMotionDetected(false), 500);
+                onMotionRef.current(new Date(), dataUrl, deviceId);
+              }
               onLatestFrame?.(dataUrl);
               if (ratio > motionPixelRatio) {
                 if (import.meta.env.DEV) {
@@ -107,7 +150,7 @@ export const CameraMotionDetector: React.FC<MotionWithOverlayProps> = ({
                 }
                 setIsMotionDetected(true);
                 setTimeout(() => setIsMotionDetected(false), 500);
-                onMotionRef.current(new Date(), dataUrl);
+                onMotionRef.current(new Date(), dataUrl, deviceId);
               }
             }
 
