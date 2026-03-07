@@ -1,4 +1,7 @@
-import { InferenceSession, Tensor } from "onnxruntime-web/webgpu";
+import { InferenceSession, Tensor, env } from "onnxruntime-web/webgpu";
+
+// Configure ONNX Runtime to use CDN for WASM files to bypass Cloudflare Pages 25MB limit
+env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/";
 
 /**
  * Loads an ONNX model and performs a warm-up inference run.

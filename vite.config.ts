@@ -1,10 +1,10 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 import path from "path";
+import fs from "fs";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     preact(),
@@ -22,6 +22,19 @@ export default defineConfig({
         enabled: false,
       },
     }),
+    {
+      name: "remove-onnx-wasm",
+      closeBundle() {
+        const assetsDir = path.resolve(__dirname, 'dist/assets');
+        if (fs.existsSync(assetsDir)) {
+          fs.readdirSync(assetsDir).forEach((file: string) => {
+            if (file.endsWith('.wasm')) {
+              fs.unlinkSync(path.join(assetsDir, file));
+            }
+          });
+        }
+      }
+    }
   ],
   resolve: {
     alias: {
@@ -41,7 +54,7 @@ export default defineConfig({
             return code.replace(/from\s+['"]onnxruntime-web['"]/g, `from 'onnxruntime-web/webgpu'`);
           }
         },
-      },
+      }
     ],
   },
 });
