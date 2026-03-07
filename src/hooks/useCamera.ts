@@ -1,9 +1,10 @@
-import { useState, useCallback } from "preact/hooks";
+import { useState, useCallback, useRef } from "preact/hooks";
 import {
   CAMERA_PERMISSION_ERROR,
   NO_CAMERAS_FOUND_ERROR,
   FAILED_TO_ACCESS_CAMERAS_ERROR,
 } from "../lib/constants";
+import { getUserMediaWithTimeout, stopMediaStream } from "../lib/utils";
 
 export interface CameraHookResult {
   availableDevices: MediaDeviceInfo[];
@@ -19,29 +20,30 @@ export function useCamera(): CameraHookResult {
   const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
   const [isLoadingCameras, setIsLoadingCameras] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const permissionStreamRef = useRef<MediaStream | null>(null);
 
   const requestCameraAccess = useCallback(async () => {
     setIsLoadingCameras(true);
     setCameraError(null);
 
     try {
-      // Request camera permission first. This is necessary for enumerateDevices()
-      // to return a complete list of devices on some platforms.
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      // Stop the stream immediately after getting permission.
+      const stream = await getUserMediaWithTimeout({ video: true }, 5000);
+      permissionStreamRef.current = stream;
       stream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.error("Error requesting camera permission:", err);
-      setCameraError(CAMERA_PERMISSION_ERROR);
+      if (err instanceof Error && err.message.includes("timed out")) {
+        setCameraError("Camera permission request timed out. Please try again.");
+      } else {
+        setCameraError(CAMERA_PERMISSION_ERROR);
+      }
       setIsLoadingCameras(false);
       return;
     }
 
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(
-        (device) => device.kind === "videoinput"
-      );
+      const videoDevices = devices.filter((device) => device.kind === "videoinput");
       if (videoDevices.length === 0) {
         setCameraError(NO_CAMERAS_FOUND_ERROR);
       }
@@ -54,7 +56,6 @@ export function useCamera(): CameraHookResult {
   }, []);
 
   const addCamera = useCallback((deviceId: string) => {
-    // Remove the selected device from available devices
     setAvailableDevices((prev) => prev.filter((device) => device.deviceId !== deviceId));
   }, []);
 
@@ -62,52 +63,72 @@ export function useCamera(): CameraHookResult {
     setAvailableDevices([]);
   }, []);
 
-  const captureFrames = useCallback(async (deviceIds: string[]): Promise<{ frame: string; cameraIndex: number }[]> => {
-    const frames: { frame: string; cameraIndex: number }[] = [];
+  const captureFrames = useCallback(
+    async (deviceIds: string[]): Promise<{ frame: string; cameraIndex: number }[]> => {
+      const frames: { frame: string; cameraIndex: number }[] = [];
 
-    for (let i = 0; i < deviceIds.length; i++) {
-      const deviceId = deviceIds[i];
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId } }
-        });
+      for (let i = 0; i < deviceIds.length; i++) {
+        const deviceId = deviceIds[i];
+        let stream: MediaStream | null = null;
+        let video: HTMLVideoElement | null = null;
+        let canvas: HTMLCanvasElement | null = null;
 
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.muted = true;
-        await new Promise<void>((resolve) => {
-          video.onloadedmetadata = () => resolve();
-          video.play();
-        });
+        try {
+          stream = await getUserMediaWithTimeout(
+            {
+              video: { deviceId: { exact: deviceId } },
+            },
+            5000,
+          );
 
-        let width = video.videoWidth;
-        let height = video.videoHeight;
-        if (width > 1280) {
-          height = Math.round((height * 1280) / width);
-          width = 1280;
+          video = document.createElement("video");
+          video.srcObject = stream;
+          video.muted = true;
+
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error("Video load timeout"));
+            }, 5000);
+
+            video!.onloadedmetadata = () => {
+              clearTimeout(timeout);
+              video!.play().then(resolve).catch(reject);
+            };
+            video!.onerror = () => {
+              clearTimeout(timeout);
+              reject(new Error("Video load error"));
+            };
+          });
+
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+          if (width > 1280) {
+            height = Math.round((height * 1280) / width);
+            width = 1280;
+          }
+          canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            frames.push({ frame: dataUrl, cameraIndex: i });
+          }
+        } catch (error) {
+          console.error(`Error capturing frame from camera ${i + 1}:`, error);
+        } finally {
+          stopMediaStream(stream);
+          if (video) video.remove();
+          if (canvas) canvas.remove();
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          frames.push({ frame: dataUrl, cameraIndex: i });
-        }
-
-        // Clean up
-        stream.getTracks().forEach(track => track.stop());
-        video.remove();
-        canvas.remove();
-      } catch (error) {
-        console.error(`Error capturing frame from camera ${i + 1}:`, error);
       }
-    }
 
-    return frames;
-  }, []);
+      return frames;
+    },
+    [],
+  );
 
   return {
     availableDevices,

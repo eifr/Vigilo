@@ -1,24 +1,33 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import { dataUrlToBlob } from "../lib/utils";
-import { MOTION_DETECTED_MESSAGE_PREFIX, STATUS_COMMAND, STATUS_RESPONSE_PREFIX, STATUS_TIMESTAMP_PREFIX } from "../lib/constants";
+import { useDetectionBackend } from "./useDetectionBackend";
+import {
+  MOTION_DETECTED_MESSAGE_PREFIX,
+  STATUS_COMMAND,
+  STATUS_RESPONSE_PREFIX,
+  STATUS_TIMESTAMP_PREFIX,
+} from "../lib/constants";
 
 export function useTelegram() {
-  const [telegramBotToken, setTelegramBotToken] = useState(() => {
-    return localStorage.getItem("telegramBotToken") || "";
-  });
-  const [telegramChatId, setTelegramChatId] = useState<number>(() => {
-    const stored = localStorage.getItem("telegramChatId");
-    return stored ? Number(stored) : 0;
-  });
-  const [sendTelegrams, setSendTelegrams] = useState(false);
-  const [debounceTime, setDebounceTime] = useState(5000);
+  const [telegramBotToken, setTelegramBotToken] = useState(
+    () => localStorage.getItem("telegramBotToken") || "",
+  );
+  const [telegramChatId, setTelegramChatId] = useState<number>(() =>
+    Number(localStorage.getItem("telegramChatId") || 0),
+  );
+  const [sendTelegrams, setSendTelegrams] = useState(
+    () => localStorage.getItem("sendTelegrams") === "true",
+  );
+  const [debounceTime, setDebounceTime] = useState(5000); // Wait 5 seconds minimum between global sends
   const [botUsername, setBotUsername] = useState("");
-  const [hasStatusHandler, setHasStatusHandler] = useState(false);
+
   const botRef = useRef<Bot | null>(null);
+  const { toggleTrackedObject } = useDetectionBackend();
+  const globalCooldownRef = useRef<number>(0);
   const onStatusRequestRef = useRef<(() => void) | null>(null);
 
-  // Persist to localStorage
+  // Sync to local storage
   useEffect(() => {
     localStorage.setItem("telegramBotToken", telegramBotToken);
   }, [telegramBotToken]);
@@ -28,10 +37,12 @@ export function useTelegram() {
   }, [telegramChatId]);
 
   useEffect(() => {
+    localStorage.setItem("sendTelegrams", sendTelegrams.toString());
+  }, [sendTelegrams]);
+
+  useEffect(() => {
     if (botRef.current) {
-      botRef.current.stop().catch(() => {
-        /* ignore error if already stopped */
-      });
+      botRef.current.stop().catch(() => {});
     }
 
     if (!telegramBotToken) {
@@ -46,211 +57,182 @@ export function useTelegram() {
     bot.api
       .getMe()
       .then((me) => setBotUsername(me.username))
-      .catch((err) => {
-        console.error("Error getting bot username:", err);
-        setBotUsername("");
-      });
+      .catch(console.error);
 
+    // Initial Registration of Chat ID
     if (!telegramChatId) {
       bot.on("message", (ctx) => {
-        console.log(ctx);
         const chatId = ctx.message.chat.id;
         setTelegramChatId(chatId);
-        // Send operational message
-        bot.api.sendMessage(chatId, "🚀 System is operational! You can now send /status to get system status and camera snapshots.").catch((error) => {
-          console.error("Error sending operational message:", error);
-        });
+        bot.api.sendMessage(chatId, "🚀 Vigilo System is operational!").catch(console.error);
         bot.stop();
       });
-
-      bot
-        .start({
-          allowed_updates: ["message"],
-          onStart: (me) => {
-            console.log(`Bot ${me.username} started listening for chat ID.`);
-          },
-        })
-        .catch((err) => {
-          console.error("Error with bot polling:", err);
-        });
-     } else if (hasStatusHandler) {
-       console.log("Registering status command");
-       // Listen for status command when chat ID is set
-       bot.command(STATUS_COMMAND, () => {
-         console.log("Status command received");
-         onStatusRequestRef.current?.();
-       });
-
-      bot.start().catch((err) => {
-        console.error("Error starting bot for status commands:", err);
+      bot.start({ allowed_updates: ["message"] }).catch(console.error);
+    } else {
+      // Listen for Callback Queries from Inline Keyboards
+      bot.on("callback_query:data", async (ctx) => {
+        const data = ctx.callbackQuery.data;
+        if (data.startsWith("track_")) {
+          const className = data.replace("track_", "");
+          toggleTrackedObject(className, true);
+          await ctx.editMessageCaption({ caption: `✅ Tracking started for: ${className}` });
+        } else if (data.startsWith("ignore_")) {
+          const className = data.replace("ignore_", "");
+          toggleTrackedObject(className, false);
+          await ctx.editMessageCaption({ caption: `❌ Ignoring: ${className}` });
+        }
+        await ctx.answerCallbackQuery();
       });
+
+      // Listen for status command
+      bot.command(STATUS_COMMAND, () => {
+        onStatusRequestRef.current?.();
+      });
+
+      bot.start().catch(console.error);
     }
 
     return () => {
-      bot.stop().catch(() => {
-        /* ignore error if already stopped */
-      });
+      bot.stop().catch(() => {});
     };
-  }, [telegramBotToken, telegramChatId, hasStatusHandler]);
-
-  const isThrottled = useRef(false);
+  }, [telegramBotToken, telegramChatId, toggleTrackedObject]);
 
   const sendTelegramMessage = useCallback(
-    (frame: string) => {
-      if (isThrottled.current) {
-        return;
-      }
+    async (frame: string, customMessage?: string) => {
       if (!sendTelegrams || !telegramChatId || !botRef.current) {
-        return;
+        if (!sendTelegrams) console.log("Telegram skip: Send toggle is off");
+        if (!telegramChatId) console.log("Telegram skip: No Chat ID");
+        return false;
       }
 
-      isThrottled.current = true;
-      setTimeout(() => {
-        isThrottled.current = false;
-      }, debounceTime);
+      // Global Cooldown Check
+      if (Date.now() < globalCooldownRef.current) {
+        console.log("Telegram skip: Global cooldown active");
+        return false;
+      }
 
-      const message = `${MOTION_DETECTED_MESSAGE_PREFIX} ${new Date().toLocaleTimeString()}`;
+      globalCooldownRef.current = Date.now() + debounceTime;
 
-       let blob: Blob;
-       try {
-         blob = dataUrlToBlob(frame);
-       } catch (error) {
-         console.error("Error converting data URL to blob:", error);
-         return;
-       }
-       console.log("Blob size:", blob.size, "Blob type:", blob.type);
-       if (blob.size === 0) {
-         console.error("Blob is empty, not sending photo");
-         return;
-       }
-       console.log("Sending photo to chat_id:", telegramChatId);
-       const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
-       const formData = new FormData();
-       formData.append('chat_id', telegramChatId.toString());
-       formData.append('photo', blob, 'motion.jpg');
-       formData.append('caption', message);
-       fetch(url, {
-         method: 'POST',
-         body: formData,
-       })
-         .then((res) => res.json())
-         .then((data) => {
-           if (!data.ok) {
-             throw new Error(`Telegram API error: ${data.error_code} - ${data.description}`);
-           }
-           console.log("Telegram photo sent successfully");
-         })
-         .catch((error) => {
-           console.error("Error sending Telegram photo:", error);
-           // Check if it's a CORS or network error
-           if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-             console.error("Possible CORS or network issue. Telegram Bot API should be called from server-side.");
-           }
-         });
+      const message =
+        customMessage || `${MOTION_DETECTED_MESSAGE_PREFIX} ${new Date().toLocaleTimeString()}`;
+
+      try {
+        const blob = dataUrlToBlob(frame);
+        if (blob.size === 0) return false;
+
+        const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+        const formData = new FormData();
+        formData.append("chat_id", telegramChatId.toString());
+        formData.append("photo", blob, "motion.jpg");
+        formData.append("caption", message);
+
+        const res = await fetch(url, { method: "POST", body: formData });
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.error("Telegram API error:", res.status, text);
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error sending Telegram photo:", error);
+        return false;
+      }
     },
-    [sendTelegrams, telegramChatId, debounceTime]
+    [sendTelegrams, telegramChatId, debounceTime, telegramBotToken],
   );
 
-  const sendMessage = useCallback(
-    (text: string) => {
-      if (!telegramChatId || !botRef.current) {
-        return;
-      }
+  const askToTrackObject = useCallback(
+    async (className: string, frame: string) => {
+      if (!sendTelegrams || !telegramChatId || !telegramBotToken) return false;
 
-      botRef.current.api.sendMessage(telegramChatId, text).catch((error) => {
-        console.error("Error sending message:", error);
-      });
+      try {
+        const blob = dataUrlToBlob(frame);
+        if (blob.size === 0) return false;
+
+        const keyboard = new InlineKeyboard()
+          .text(`✅ Track '${className}'`, `track_${className}`)
+          .text(`❌ Ignore`, `ignore_${className}`);
+
+        const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+        const formData = new FormData();
+        formData.append("chat_id", telegramChatId.toString());
+        formData.append("photo", blob, "discovery.jpg");
+        formData.append(
+          "caption",
+          `New object discovered: *${className}*\nDo you want to receive alerts for this?`,
+        );
+        formData.append("parse_mode", "MarkdownV2");
+        formData.append("reply_markup", JSON.stringify(keyboard));
+
+        const res = await fetch(url, { method: "POST", body: formData });
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.error("Telegram API error:", res.status, text);
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error sending Telegram discovery photo:", error);
+        return false;
+      }
     },
-    [telegramChatId]
+    [sendTelegrams, telegramChatId, telegramBotToken],
   );
 
   const sendStatusResponse = useCallback(
-    (frames: { frame: string; cameraIndex: number }[]) => {
-      if (!telegramChatId || !botRef.current) {
-        return;
-      }
+    async (frames: { frame: string; cameraIndex: number }[]) => {
+      if (!telegramChatId || !botRef.current || !telegramBotToken) return;
 
       const bot = botRef.current;
 
-      // Send status message first
-      bot.api.sendMessage(telegramChatId, STATUS_RESPONSE_PREFIX).catch((error) => {
-        console.error("Error sending status message:", error);
-      });
+      try {
+        await bot.api.sendMessage(telegramChatId, STATUS_RESPONSE_PREFIX);
 
-       // Send photos for each camera
-       frames.forEach(({ frame, cameraIndex }) => {
-         const message = `${STATUS_TIMESTAMP_PREFIX} ${new Date().toLocaleTimeString()} - Camera ${cameraIndex + 1}`;
+        for (const { frame, cameraIndex } of frames) {
+          const message = `${STATUS_TIMESTAMP_PREFIX} ${new Date().toLocaleTimeString()} - Camera ${cameraIndex + 1}`;
 
-          let blob: Blob;
           try {
-            blob = dataUrlToBlob(frame);
+            const blob = dataUrlToBlob(frame);
+            if (blob.size === 0) continue;
+
+            const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
+            const formData = new FormData();
+            formData.append("chat_id", telegramChatId.toString());
+            formData.append("photo", blob, `status_camera_${cameraIndex + 1}.jpg`);
+            formData.append("caption", message);
+
+            const res = await fetch(url, { method: "POST", body: formData });
+            const text = await res.text();
+
+            if (!res.ok) {
+              console.error(`Telegram API error for camera ${cameraIndex + 1}:`, res.status, text);
+            }
           } catch (error) {
-            console.error(`Error converting data URL to blob for camera ${cameraIndex + 1}:`, error);
-            return;
+            console.error(`Error sending frame for camera ${cameraIndex + 1}:`, error);
           }
-          console.log("Blob size:", blob.size, "Blob type:", blob.type);
-          if (blob.size === 0) {
-            console.error(`Blob for camera ${cameraIndex + 1} is empty, not sending photo`);
-            return;
-          }
-          console.log("Sending status photo to chat_id:", telegramChatId);
-          const url = `https://api.telegram.org/bot${telegramBotToken}/sendPhoto`;
-          const formData = new FormData();
-          formData.append('chat_id', telegramChatId.toString());
-          formData.append('photo', blob, `status_camera_${cameraIndex + 1}.jpg`);
-          formData.append('caption', message);
-          fetch(url, {
-            method: 'POST',
-            body: formData,
-          })
-            .then((res) => res.json())
-            .then((data) => {
-              if (!data.ok) {
-                throw new Error(`Telegram API error: ${data.error_code} - ${data.description}`);
-              }
-              console.log(`Status photo for camera ${cameraIndex + 1} sent successfully`);
-            })
-            .catch((error) => {
-              console.error(`Error sending status photo for camera ${cameraIndex + 1}:`, error);
-              // Check if it's a CORS or network error
-              if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                console.error("Possible CORS or network issue. Telegram Bot API should be called from server-side.");
-              }
-            });
-       });
+        }
+      } catch (error) {
+        console.error("Error sending status response:", error);
+      }
     },
-    [telegramChatId]
+    [telegramChatId, telegramBotToken],
   );
 
   const setStatusHandler = useCallback((handler: () => void) => {
     onStatusRequestRef.current = handler;
-    setHasStatusHandler(true);
   }, []);
 
   const resetTelegramSettings = useCallback(() => {
-    // Send off message before resetting
-    if (telegramBotToken && telegramChatId) {
-      const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
-      fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: telegramChatId,
-          text: "🔴 System is off. Telegram notifications disabled.",
-        }),
-      }).catch((error) => {
-        console.error("Error sending off message:", error);
-      });
-    }
-
     localStorage.removeItem("telegramBotToken");
     localStorage.removeItem("telegramChatId");
+    setTelegramBotToken("");
     setTelegramChatId(0);
     setBotUsername("");
-    setHasStatusHandler(false);
-  }, [telegramBotToken, telegramChatId]);
+  }, []);
 
   return {
     telegramBotToken,
@@ -262,8 +244,8 @@ export function useTelegram() {
     setDebounceTime,
     sendTelegramMessage,
     sendStatusResponse,
-    sendMessage,
     setStatusHandler,
+    askToTrackObject,
     botUsername,
     resetTelegramSettings,
   };

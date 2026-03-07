@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect } from "preact/hooks";
 
 export interface ConnectivityStatus {
   isOnline: boolean;
@@ -15,9 +15,10 @@ export function useConnectivity(): ConnectivityStatus {
 
   useEffect(() => {
     const updateStatus = () => {
-      const connection = (navigator as any).connection || 
-                        (navigator as any).mozConnection || 
-                        (navigator as any).webkitConnection;
+      const connection =
+        (navigator as any).connection ||
+        (navigator as any).mozConnection ||
+        (navigator as any).webkitConnection;
 
       setStatus({
         isOnline: navigator.onLine,
@@ -43,24 +44,25 @@ export function useConnectivity(): ConnectivityStatus {
     updateStatus();
 
     // Event listeners
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     // Listen for connection changes if available
-    const connection = (navigator as any).connection || 
-                      (navigator as any).mozConnection || 
-                      (navigator as any).webkitConnection;
-    
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+
     if (connection) {
-      connection.addEventListener('change', handleConnectionChange);
+      connection.addEventListener("change", handleConnectionChange);
     }
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+
       if (connection) {
-        connection.removeEventListener('change', handleConnectionChange);
+        connection.removeEventListener("change", handleConnectionChange);
       }
     };
   }, []);

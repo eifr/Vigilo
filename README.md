@@ -18,6 +18,14 @@ Turn any device with a camera into a portable security system! 🛡️ This slic
     ```bash
     bun install
     ```
+4.  Navigate to the project directory:
+    ```bash
+    cd Vigilo
+    ```
+5.  Install the dependencies:
+    ```bash
+    bun install
+    ```
 
 ## 📜 Available Scripts
 

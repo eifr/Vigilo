@@ -16,11 +16,7 @@ export function TelegramSetupGuide({ botUsername, telegramChatId }: TelegramSetu
         onClick={() => setIsOpen(!isOpen)}
       >
         How to connect your Telegram Bot
-        <ChevronDown
-          className={`w-4 h-4 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
+        <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
         <div className="p-4 pt-0 text-sm">
@@ -48,9 +44,17 @@ export function TelegramSetupGuide({ botUsername, telegramChatId }: TelegramSetu
             </li>
             <li className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <span>Follow the instructions from BotFather to set up a name and username.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              {botUsername ? (
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+              ) : (
+                <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              )}
               <span>
-                Follow the instructions from BotFather to set up a name and
-                username.
+                BotFather will give you a token. Copy this token and paste it into the "Telegram Bot
+                Token" field below.
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -60,20 +64,8 @@ export function TelegramSetupGuide({ botUsername, telegramChatId }: TelegramSetu
                 <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
               )}
               <span>
-                BotFather will give you a token. Copy this token and paste it into
-                the "Telegram Bot Token" field below.
-              </span>
-            </li>
-            <li className="flex items-start gap-2">
-              {botUsername ? (
-                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-              ) : (
-                <Circle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              )}
-              <span>
-                Once you enter a valid token, a link and QR code will appear.
-                Click it to open a chat with your bot and press the{" "}
-                <strong>Start</strong> button.
+                Once you enter a valid token, a link and QR code will appear. Click it to open a
+                chat with your bot and press the <strong>Start</strong> button.
               </span>
             </li>
             <li className="flex items-start gap-2">

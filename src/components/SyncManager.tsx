@@ -1,24 +1,21 @@
-import { motion } from 'motion/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Database, 
-  Upload, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  Wifi, 
-  WifiOff, 
-  RefreshCw, 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Database,
+  Upload,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Wifi,
+  WifiOff,
+  RefreshCw,
   Trash2,
   BarChart3,
   Activity,
-  Shield
-} from 'lucide-react';
-import { useSyncQueue } from '../hooks/useSyncQueue';
-import { useConnectivity } from '../hooks/useConnectivity';
+  Shield,
+} from "lucide-react";
+import { useSyncQueue } from "../hooks/useSyncQueue";
+import { useConnectivity } from "../hooks/useConnectivity";
 
 interface SyncManagerProps {
   telegramBotToken: string;
@@ -27,14 +24,7 @@ interface SyncManagerProps {
 
 export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerProps) {
   const { isOnline } = useConnectivity();
-  const {
-    syncStatus,
-    tryImmediateSend,
-    queueEventOffline,
-    flushQueue,
-    retryFailedEvents,
-    clearFailedEvents,
-  } = useSyncQueue({
+  const { syncStatus, flushQueue, retryFailedEvents, clearFailedEvents } = useSyncQueue({
     telegramBotToken,
     telegramChatId,
   });
@@ -56,7 +46,7 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
               <WifiOff className="w-4 h-4 text-yellow-500" />
             )}
             <span className="text-sm font-normal text-muted-foreground">
-              {isOnline ? 'Online' : 'Offline'}
+              {isOnline ? "Online" : "Offline"}
             </span>
           </div>
         </CardTitle>
@@ -69,28 +59,24 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
               <Clock className="w-4 h-4" />
               Pending
             </div>
-            <div className="text-2xl font-bold text-blue-600">
-              {syncStatus.pendingCount}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{syncStatus.pendingCount}</div>
           </div>
-          
+
           <div className="text-center p-3 rounded-lg bg-muted/40">
             <div className="flex items-center justify-center gap-1 text-sm font-medium text-red-600">
               <AlertTriangle className="w-4 h-4" />
               Failed
             </div>
-            <div className="text-2xl font-bold text-red-600">
-              {syncStatus.failedCount}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{syncStatus.failedCount}</div>
           </div>
-          
+
           <div className="text-center p-3 rounded-lg bg-muted/40">
             <div className="flex items-center justify-center gap-1 text-sm font-medium text-green-600">
               <CheckCircle className="w-4 h-4" />
               Status
             </div>
             <div className="text-lg font-bold text-green-600">
-              {isFlushing ? 'Flushing' : totalEvents === 0 ? 'Ready' : 'Queued'}
+              {isFlushing ? "Flushing" : totalEvents === 0 ? "Ready" : "Queued"}
             </div>
           </div>
         </div>
@@ -100,33 +86,31 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">
-                {isFlushing ? 'Flushing Events...' : 'Syncing Events...'}
+                {isFlushing ? "Flushing Events..." : "Syncing Events..."}
               </span>
               <span className="text-muted-foreground">
                 {syncStatus.syncProgress} / {syncStatus.totalToSync}
               </span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
-              <motion.div
+              <div
                 className="bg-primary h-2 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ 
-                  width: `${(syncStatus.syncProgress / syncStatus.totalToSync) * 100}%` 
-                }}
-                transition={{ duration: 0.3 }}
+                style={{ width: `${(syncStatus.syncProgress / syncStatus.totalToSync) * 100}%` }}
               />
             </div>
           </div>
         )}
 
         {/* Connection Status Message */}
-        <div className={`p-4 rounded-lg border ${
-          syncStatus.wasOffline && isOnline 
-            ? 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200'
-            : isOnline 
-              ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-200'
-              : 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200'
-        }`}>
+        <div
+          className={`p-4 rounded-lg border ${
+            syncStatus.wasOffline && isOnline
+              ? "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200"
+              : isOnline
+                ? "bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-200"
+                : "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200"
+          }`}
+        >
           <div className="flex items-center gap-2">
             {syncStatus.wasOffline && isOnline ? (
               <Upload className="w-4 h-4" />
@@ -136,23 +120,21 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
               <WifiOff className="w-4 h-4" />
             )}
             <span className="font-medium">
-              {syncStatus.wasOffline && isOnline 
-                ? 'Connection Restored'
-                : isOnline 
-                  ? 'Connection Stable' 
-                  : 'Connection Lost'
-              }
+              {syncStatus.wasOffline && isOnline
+                ? "Connection Restored"
+                : isOnline
+                  ? "Connection Stable"
+                  : "Connection Lost"}
             </span>
           </div>
           <p className="text-sm mt-1">
-            {syncStatus.wasOffline && isOnline 
+            {syncStatus.wasOffline && isOnline
               ? `Syncing ${syncStatus.pendingCount} missed events from offline period...`
-              : isOnline 
-                ? syncStatus.pendingCount === 0 
-                  ? 'All events synced successfully' 
+              : isOnline
+                ? syncStatus.pendingCount === 0
+                  ? "All events synced successfully"
                   : `${totalEvents} events ready for sync`
-                : 'Events will be queued until connection is restored'
-            }
+                : "Events will be queued until connection is restored"}
           </p>
         </div>
 
@@ -170,7 +152,7 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Retry Failed
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -183,7 +165,7 @@ export function SyncManager({ telegramBotToken, telegramChatId }: SyncManagerPro
               </Button>
             </div>
           )}
-          
+
           {totalEvents > 0 && !hasIssues && (
             <Button
               variant="default"
@@ -235,42 +217,34 @@ export function SyncStats({ telegramBotToken, telegramChatId }: SyncStatsProps) 
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Connection Status</Label>
+            <span className="text-sm font-medium">Connection Status</span>
             <div className="flex items-center gap-2">
               {isOnline ? (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               ) : (
                 <WifiOff className="w-4 h-4 text-yellow-500" />
               )}
-              <span className="text-sm">
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
+              <span className="text-sm">{isOnline ? "Online" : "Offline"}</span>
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Queue Status</Label>
+            <span className="text-sm font-medium">Queue Status</span>
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-500" />
-              <span className="text-sm">
-                {syncStatus.isFlushing ? 'Flushing' : 'Idle'}
-              </span>
+              <span className="text-sm">{syncStatus.isFlushing ? "Flushing" : "Idle"}</span>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {syncStatus.pendingCount}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{syncStatus.pendingCount}</div>
             <div className="text-sm text-muted-foreground">Pending</div>
           </div>
-          
+
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">
-              {syncStatus.failedCount}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{syncStatus.failedCount}</div>
             <div className="text-sm text-muted-foreground">Failed</div>
           </div>
         </div>

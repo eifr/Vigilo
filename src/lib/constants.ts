@@ -24,12 +24,10 @@ export const FAILED_TO_ACCESS_CAMERAS_ERROR = "Failed to access cameras.";
 
 // Keyboard shortcuts
 export const KEYBOARD_SHORTCUTS = {
-  ADD_CAMERA: 'a',
-  TOGGLE_THEME: 't',
-  TOGGLE_CAMERAS: 'h',
+  ADD_CAMERA: "a",
+  TOGGLE_THEME: "t",
+  TOGGLE_CAMERAS: "h",
 } as const;
-
-
 
 // Motion sensitivity ranges
 export const MOTION_SENSITIVITY_RANGES = {

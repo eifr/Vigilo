@@ -47,9 +47,7 @@ export function TelegramSettings({
               checked={sendTelegrams}
               onCheckedChange={setSendTelegrams}
             />
-            <Label htmlFor="send-telegrams">
-              Send Telegram message on motion
-            </Label>
+            <Label htmlFor="send-telegrams">Send Telegram message on motion</Label>
           </div>
           <div className="space-y-2">
             <Label htmlFor="bot-token" className="flex items-center gap-2">
@@ -62,9 +60,7 @@ export function TelegramSettings({
               type="password"
               placeholder="Paste your Telegram Bot Token here"
               value={telegramBotToken}
-              onInput={(e) =>
-                setTelegramBotToken((e.target as HTMLInputElement).value)
-              }
+              onInput={(e) => setTelegramBotToken((e.target as HTMLInputElement).value)}
             />
           </div>
           {botUsername && (
@@ -80,14 +76,9 @@ export function TelegramSettings({
                   @{botUsername}
                 </a>
               </p>
-              <p className="text-sm text-muted-foreground">
-                Or scan this QR code:
-              </p>
+              <p className="text-sm text-muted-foreground">Or scan this QR code:</p>
               <div className="flex justify-center mt-2">
-                <QRCodeCanvas
-                  value={`https://t.me/${botUsername}`}
-                  size={128}
-                />
+                <QRCodeCanvas value={`https://t.me/${botUsername}`} size={128} />
               </div>
             </div>
           )}
@@ -107,7 +98,8 @@ export function TelegramSettings({
             />
             {!!telegramChatId && (
               <p className="text-sm text-muted-foreground">
-                Send <code className="bg-muted px-1 rounded">/status</code> to your bot to get system status and camera snapshots.
+                Send <code className="bg-muted px-1 rounded">/status</code> to your bot to get
+                system status and camera snapshots.
               </p>
             )}
           </div>
@@ -121,18 +113,10 @@ export function TelegramSettings({
             id="debounce-time"
             type="number"
             value={debounceTime}
-            onInput={(e) =>
-              setDebounceTime(
-                parseInt((e.target as HTMLInputElement).value, 10)
-              )
-            }
+            onInput={(e) => setDebounceTime(parseInt((e.target as HTMLInputElement).value, 10))}
           />
         </div>
-        <Button
-          onClick={resetTelegramSettings}
-          variant="outline"
-          className="w-full"
-        >
+        <Button onClick={resetTelegramSettings} variant="outline" className="w-full">
           <RotateCcw className="w-4 h-4 mr-2" />
           Reset Telegram Settings
         </Button>

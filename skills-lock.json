@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "bun-development": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "8729b190cc11927a7d4512037fc68fd4b5145b024d89764dcaf85f0ffa760e1d"
+    }
+  }
+}

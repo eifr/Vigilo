@@ -11,10 +11,8 @@ interface CameraListProps {
   onAddCamera: () => void;
   onSelectCamera: (deviceId: string) => void;
   onRemoveCamera: (deviceId: string) => void;
-  onMotion: (timestamp: Date, frame: string, deviceId: string) => void;
+  onMotion: (timestamp: Date, frame: string, deviceId: string, boxes: any[]) => void;
   onLatestFrame: (deviceId: string, frame: string) => void;
-  diffThreshold: number;
-  motionPixelRatio: number;
   intervalMs: number;
   showCameras: boolean;
 }
@@ -29,8 +27,6 @@ export function CameraList({
   onRemoveCamera,
   onMotion,
   onLatestFrame,
-  diffThreshold,
-  motionPixelRatio,
   intervalMs,
   showCameras,
 }: CameraListProps) {
@@ -44,9 +40,7 @@ export function CameraList({
         )}
         {isLoadingCameras ? "Loading..." : "Add Camera"}
       </Button>
-      {cameraError && (
-        <p className="text-sm text-destructive mt-2">{cameraError}</p>
-      )}
+      {cameraError && <p className="text-sm text-destructive mt-2">{cameraError}</p>}
       {availableDevices.length > 0 && (
         <motion.div
           className="my-4"
@@ -89,15 +83,13 @@ export function CameraList({
               <Camera className="w-4 h-4" />
               <span className="text-sm font-medium">Camera {index + 1}</span>
             </div>
-             <CameraMotionDetector
-               deviceId={deviceId}
-               onMotion={(timestamp, frame) => onMotion(timestamp, frame, deviceId)}
-               onLatestFrame={(frame) => onLatestFrame(deviceId, frame)}
-               diffThreshold={diffThreshold}
-               motionPixelRatio={motionPixelRatio}
-               intervalMs={intervalMs}
-               hidePreview={!showCameras}
-             />
+            <CameraMotionDetector
+              deviceId={deviceId}
+              onMotion={(timestamp, frame, _, boxes) => onMotion(timestamp, frame, deviceId, boxes)}
+              onLatestFrame={(frame) => onLatestFrame(deviceId, frame)}
+              intervalMs={intervalMs}
+              hidePreview={!showCameras}
+            />
             <Button
               variant="destructive"
               onClick={() => onRemoveCamera(deviceId)}
