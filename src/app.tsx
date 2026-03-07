@@ -2,9 +2,7 @@ import { useCallback, useState, useEffect, useRef } from "preact/hooks";
 import "./app.css";
 import { TelegramSettings } from "./components/TelegramSettings";
 import { MotionSensitivitySettings } from "./components/MotionSensitivitySettings";
-import { CameraList } from "./components/CameraList";
 import { useTelegram } from "./hooks/useTelegram";
-import { useCamera } from "./hooks/useCamera";
 import { useDetectionBackend } from "./hooks/useDetectionBackend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,26 +10,22 @@ import { motion } from "motion/react";
 import { useTheme } from "./hooks/useTheme";
 import logo from "./assets/logo.svg";
 import { Eye, EyeOff, Sun, Moon, Activity, CheckCircle, AlertCircle } from "lucide-react";
-import { SiGithub } from "@icons-pack/react-simple-icons";
 import { TrackedObjectsList } from "./components/TrackedObjectsList";
 import {
   MOTION_ACTIVE_DURATION_MS,
   DEFAULT_INTERVAL_MS,
   KEYBOARD_SHORTCUTS,
 } from "./lib/constants";
-import type { BoundingBox } from "./lib/types";
 import { Camera } from "./components/Camera";
+import classes from "./utils/yolo_classes.json";
 
 export function App() {
   const { theme, setTheme } = useTheme();
-  const [cameras, setCameras] = useState<string[]>([]);
   const [showCameras, setShowCameras] = useState(true);
   const [lastMotionTime, setLastMotionTime] = useState<Date | null>(null);
   const [intervalMs, setIntervalMs] = useState(DEFAULT_INTERVAL_MS);
   const [latestFrames, setLatestFrames] = useState<Record<string, string>>({});
 
-  const { availableDevices, isLoadingCameras, cameraError, requestCameraAccess, addCamera } =
-    useCamera();
   const { mode, trackedObjects, addDiscoveredObject } = useDetectionBackend();
 
   // Local sync to prevent multiple rapid discoveries of the same object before React state updates
@@ -62,9 +56,9 @@ export function App() {
 
   const handleStatusRequest = useCallback(async () => {
     try {
-      const frames = cameras
-        .map((deviceId, index) => ({
-          frame: latestFrames[deviceId] || "",
+      const frames = Object.entries(latestFrames)
+        .map(([_deviceId, frame], index) => ({
+          frame: frame,
           cameraIndex: index,
         }))
         .filter((f) => f.frame);
@@ -90,42 +84,18 @@ export function App() {
     } catch (error) {
       console.error("Error handling status request:", error);
     }
-  }, [cameras, latestFrames, sendStatusResponse]);
+  }, [latestFrames, sendStatusResponse]);
 
   useEffect(() => {
     setStatusHandler(handleStatusRequest);
   }, [setStatusHandler, handleStatusRequest]);
 
-  const isAppReady = cameras.length > 0 && telegramBotToken && telegramChatId;
+  const isAppReady = Object.keys(latestFrames).length > 0 && telegramBotToken && telegramChatId;
   const isMotionActive =
     lastMotionTime && Date.now() - lastMotionTime.getTime() < MOTION_ACTIVE_DURATION_MS;
 
-  const handleAddCamera = useCallback(() => {
-    requestCameraAccess();
-  }, [requestCameraAccess]);
-
-  const handleSelectCamera = useCallback(
-    (deviceId: string) => {
-      setCameras((prev) => {
-        if (!prev.includes(deviceId)) {
-          return [...prev, deviceId];
-        }
-        return prev;
-      });
-      addCamera(deviceId);
-    },
-    [addCamera],
-  );
-
-  const handleRemoveCamera = useCallback(
-    (deviceId: string) => {
-      setCameras(cameras.filter((id) => id !== deviceId));
-    },
-    [cameras],
-  );
-
   const handleMotion = useCallback(
-    async (timestamp: Date, frame: string, _deviceId: string, boxes: BoundingBox[]) => {
+    async (timestamp: Date, frame: string, _deviceId: string, boxes: any[]) => {
       setLastMotionTime(timestamp);
 
       if (!sendTelegrams) return;
@@ -134,7 +104,9 @@ export function App() {
         let sentAny = false;
 
         for (const box of boxes) {
-          const label = box.label || "unknown";
+          // map classIdx to label string using classes JSON
+          const label = (classes.classes as string[])[box.classIdx] || "unknown";
+          const confidence = box.score || 0;
           const trackedObj = trackedObjects[label];
 
           if (!locallyKnownObjects.current.has(label)) {
@@ -147,7 +119,7 @@ export function App() {
             if (!sentAny) {
               await sendTelegramMessage(
                 frame,
-                `🚨 Detected: ${label} (${Math.round((box.confidence || 0) * 100)}%)`,
+                `🚨 Detected: ${label} (${Math.round(confidence * 100)}%)`,
               );
               sentAny = true; // prevent sending multiple photos for multiple tracked objects in the same frame
             }
@@ -171,9 +143,6 @@ export function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       switch (e.key.toLowerCase()) {
-        case KEYBOARD_SHORTCUTS.ADD_CAMERA:
-          handleAddCamera();
-          break;
         case KEYBOARD_SHORTCUTS.TOGGLE_THEME:
           setTheme(theme === "dark" ? "light" : "dark");
           break;
@@ -184,7 +153,7 @@ export function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [theme, showCameras, handleAddCamera]);
+  }, [theme, showCameras]);
 
   return (
     <div className="min-h-screen w-full max-w-7xl mx-auto p-2 sm:p-4">
@@ -224,12 +193,6 @@ export function App() {
             {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             <span className="hidden xs:inline">Theme</span>
           </Button>
-          <a href="https://github.com/eifr/Vigilo" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">
-              <SiGithub />
-              <span className="hidden xs:inline">GitHub</span>
-            </Button>
-          </a>
         </div>
       </header>
 
@@ -267,28 +230,13 @@ export function App() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="lg:col-span-2"
         >
-          <Camera />
-          {/* <Card> */}
-          {/*   <CardHeader> */}
-          {/*     <CardTitle>Cameras</CardTitle> */}
-          {/*   </CardHeader> */}
-          {/*   <CardContent> */}
-          {/*     <CameraList */}
-          {/*       cameras={cameras} */}
-          {/**/}
-          {/*       availableDevices={availableDevices} */}
-          {/*       isLoadingCameras={isLoadingCameras} */}
-          {/*       cameraError={cameraError} */}
-          {/*       onAddCamera={handleAddCamera} */}
-          {/*       onSelectCamera={handleSelectCamera} */}
-          {/*       onRemoveCamera={handleRemoveCamera} */}
-          {/*       onMotion={handleMotion} */}
-          {/*       onLatestFrame={updateLatestFrame} */}
-          {/*       intervalMs={intervalMs} */}
-          {/*       showCameras={showCameras} */}
-          {/*     /> */}
-          {/*   </CardContent> */}
-          {/* </Card> */}
+          <div style={{ display: showCameras ? "block" : "none" }}>
+            <Camera
+              onMotion={handleMotion}
+              onLatestFrame={updateLatestFrame}
+              intervalMs={intervalMs}
+            />
+          </div>
         </motion.div>
       </main>
 

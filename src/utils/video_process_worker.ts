@@ -3,7 +3,7 @@ import { MP4Demuxer } from "./demuxer";
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 import { inferencePipeline, type ModelConfig, type Prediction } from "./inference-pipeline";
 import { renderOverlay } from "./render-overlay";
-import { getCv } from "./cv-init";
+import { getOpenCv } from "./cv-init";
 
 // --- Interfaces for incoming messages and configuration ---
 export interface VideoWorkerData {
@@ -29,7 +29,7 @@ self.onmessage = async function (e: MessageEvent<VideoWorkerData>) {
   const { file, modelConfig } = e.data;
 
   // Ensure OpenCV is initialized before doing anything
-  await getCv();
+  await getOpenCv();
 
   // Model Initialization
   let yolo_model: InferenceSession;

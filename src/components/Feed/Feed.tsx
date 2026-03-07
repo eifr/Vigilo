@@ -17,11 +17,22 @@ const DEFAULT_MODEL_CONFIG = {
   imgszType: "dynamic",
   classes: classes,
 };
-export const Feed = ({ stream }: { stream: MediaStream }) => {
+
+interface FeedProps {
+  stream: MediaStream;
+  deviceId: string;
+  onMotion: (timestamp: Date, frame: string, deviceId: string, boxes: any[]) => void;
+  onLatestFrame: (deviceId: string, frame: string) => void;
+  intervalMs: number;
+}
+
+export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: FeedProps) => {
   const videoRef = useVideoElement(stream);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const modelConfigRef = useRef(DEFAULT_MODEL_CONFIG);
   const isProcessingRef = useRef(false);
+  const lastMotionTimeRef = useRef<number>(0);
+  const lastFrameCaptureTimeRef = useRef<number>(0);
 
   const handleInferenceResult = useCallback((data: any) => {
     // Determine context for drawing
@@ -31,8 +42,30 @@ export const Feed = ({ stream }: { stream: MediaStream }) => {
     // Clear and draw
     overlayCtx.clearRect(0, 0, overlayCtx.canvas.width, overlayCtx.canvas.height);
     renderOverlay(data.results, overlayCtx, modelConfigRef.current.classes);
+    
+    // Check for objects and send motion event if interval passed
+    if (data.results && data.results.length > 0) {
+      const now = Date.now();
+      if (now - lastMotionTimeRef.current >= intervalMs) {
+        lastMotionTimeRef.current = now;
+        
+        // Capture frame for Telegram
+        if (videoRef.current) {
+          const canvas = document.createElement("canvas");
+          canvas.width = videoRef.current.videoWidth;
+          canvas.height = videoRef.current.videoHeight;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(videoRef.current, 0, 0);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+            onMotion(new Date(now), dataUrl, deviceId, data.results);
+          }
+        }
+      }
+    }
+    
     isProcessingRef.current = false;
-  }, []);
+  }, [deviceId, onMotion, intervalMs]);
 
   const { postMessage: postInferenceMessage } = useInferenceWorker({
     onModelLoaded: (e) => console.log("Model loaded", e.data),
@@ -55,13 +88,29 @@ export const Feed = ({ stream }: { stream: MediaStream }) => {
   // Initial load
   useEffect(() => {
     loadModel();
-  }, []);
+  }, [loadModel]);
 
   // Camera Loop
   const startCameraLoop = useCallback(() => {
     const loop = async () => {
       if (!isProcessingRef.current && videoRef.current && videoRef.current.readyState >= 2) {
         isProcessingRef.current = true;
+        
+        // Background frame capture for /status command (every 1 second max)
+        const now = Date.now();
+        if (now - lastFrameCaptureTimeRef.current > 1000) {
+          lastFrameCaptureTimeRef.current = now;
+          const canvas = document.createElement("canvas");
+          canvas.width = videoRef.current.videoWidth;
+          canvas.height = videoRef.current.videoHeight;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(videoRef.current, 0, 0);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.5); // lower quality for fast status
+            onLatestFrame(deviceId, dataUrl);
+          }
+        }
+        
         // Create bitmap from camera
         try {
           const bitmap = await createImageBitmap(videoRef.current);
@@ -98,14 +147,14 @@ export const Feed = ({ stream }: { stream: MediaStream }) => {
       requestAnimationFrame(loop);
     };
     loop();
-  }, [postInferenceMessage]);
+  }, [postInferenceMessage, deviceId, onLatestFrame]);
 
   useEffect(() => {
     startCameraLoop();
-  }, []);
+  }, [startCameraLoop]);
 
   return (
-    <div className="relative flex justify-center items-center">
+    <div className="relative flex justify-center items-center mt-4">
       <video
         ref={videoRef}
         style={{ borderRadius: 8 }}

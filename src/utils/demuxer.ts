@@ -46,7 +46,7 @@ export class MP4Demuxer {
     };
 
     // Triggered when samples (frames) are extracted
-    this.file.onSamples = (trackId: number, ref: any, samples: any[]) => {
+    this.file.onSamples = (_trackId: number, _ref: any, samples: any[]) => {
       for (const sample of samples) {
         // Convert MP4 sample to WebCodecs EncodedVideoChunk
         const chunk = new EncodedVideoChunk({
@@ -72,7 +72,7 @@ export class MP4Demuxer {
       // Check for supported codec configuration boxes
       const box = entry.avcC || entry.hvcC || entry.vpcC || entry.av1C;
       if (box) {
-        const stream = new MP4Box.DataStream(undefined, 0, MP4Box.DataStream.BIG_ENDIAN);
+        const stream = new MP4Box.DataStream(undefined, 0, (MP4Box.DataStream as any).BIG_ENDIAN);
         box.write(stream);
         // The first 8 bytes are the box header (size and type), so we slice them off
         return new Uint8Array(stream.buffer, 8);

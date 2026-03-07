@@ -4,7 +4,13 @@ import { Button } from "./ui/button";
 import { useCameras } from "@/hooks/useCameras";
 import { Feed } from "./Feed/Feed";
 
-export const Camera = () => {
+interface CameraProps {
+  onMotion: (timestamp: Date, frame: string, deviceId: string, boxes: any[]) => void;
+  onLatestFrame: (deviceId: string, frame: string) => void;
+  intervalMs: number;
+}
+
+export const Camera = ({ onMotion, onLatestFrame, intervalMs }: CameraProps) => {
   const [showAvailableCameras, setShowAvailableCameras] = useState(false);
   const { availableCameras, refreshDevices, addCamera, activeDeviceIds, getStream } = useCameras();
 
@@ -36,7 +42,16 @@ export const Camera = () => {
           const stream = getStream(deviceId);
           if (!stream) return null;
 
-          return <Feed key={deviceId} stream={stream} />;
+          return (
+            <Feed
+              key={deviceId}
+              deviceId={deviceId}
+              stream={stream}
+              onMotion={onMotion}
+              onLatestFrame={onLatestFrame}
+              intervalMs={intervalMs}
+            />
+          );
         })}
       </CardContent>
     </Card>
