@@ -51,16 +51,36 @@ export const useDetectionBackend = () => {
     }
   });
 
+  const [flashOnMovement, setFlashOnMovement] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.FLASH_ON_MOVEMENT);
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const [flashDurationMs, setFlashDurationMs] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.FLASH_DURATION_MS);
+      return saved !== null ? JSON.parse(saved) : 5000;
+    } catch {
+      return 5000;
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.DETECTION_BACKEND, mode);
       localStorage.setItem(STORAGE_KEYS.OPENCV_CONFIG, JSON.stringify(opencvConfig));
       localStorage.setItem(STORAGE_KEYS.YOLO_CONFIG, JSON.stringify(yoloConfig));
       localStorage.setItem("vigilo-tracked-objects", JSON.stringify(trackedObjects));
+      localStorage.setItem(STORAGE_KEYS.FLASH_ON_MOVEMENT, JSON.stringify(flashOnMovement));
+      localStorage.setItem(STORAGE_KEYS.FLASH_DURATION_MS, JSON.stringify(flashDurationMs));
     } catch (error) {
       console.error("Error saving config:", error);
     }
-  }, [mode, opencvConfig, yoloConfig, trackedObjects]);
+  }, [mode, opencvConfig, yoloConfig, trackedObjects, flashOnMovement, flashDurationMs]);
 
   const updateOpencvConfig = useCallback((config: Partial<OpenCVConfig>) => {
     setOpencvConfig((prev) => ({ ...prev, ...config }));
@@ -99,5 +119,9 @@ export const useDetectionBackend = () => {
     trackedObjects,
     toggleTrackedObject,
     addDiscoveredObject,
+    flashOnMovement,
+    setFlashOnMovement,
+    flashDurationMs,
+    setFlashDurationMs,
   };
 };

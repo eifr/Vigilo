@@ -22,6 +22,10 @@ export function MotionSensitivitySettings({
     setWebgpuEnabled,
     trackedObjects,
     toggleTrackedObject,
+    flashOnMovement,
+    setFlashOnMovement,
+    flashDurationMs,
+    setFlashDurationMs,
   } = useDetectionBackend();
 
   return (
@@ -152,6 +156,40 @@ export function MotionSensitivitySettings({
             </div>
           </div>
         )}
+
+        <div className="space-y-4 pt-4 border-t">
+          <h4 className="font-medium text-sm">Low Light Vision</h4>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="flash-toggle" className="flex flex-col space-y-1">
+              <span>Flash on Dark Movement</span>
+              <span className="font-normal text-xs text-muted-foreground">
+                Uses device flashlight (or bright screen) if movement is detected in the dark.
+              </span>
+            </Label>
+            <Switch
+              id="flash-toggle"
+              checked={flashOnMovement}
+              onCheckedChange={setFlashOnMovement}
+            />
+          </div>
+          
+          {flashOnMovement && (
+            <div className="space-y-2 mt-2">
+              <div className="flex justify-between">
+                <Label>Flash Duration</Label>
+                <span className="text-xs text-muted-foreground">{flashDurationMs / 1000}s</span>
+              </div>
+              <Input
+                type="range"
+                value={flashDurationMs / 1000}
+                onInput={(e) => setFlashDurationMs(parseInt((e.target as HTMLInputElement).value, 10) * 1000)}
+                max={15}
+                min={1}
+                step={1}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="space-y-2 pt-4 border-t">
           <div className="flex justify-between">

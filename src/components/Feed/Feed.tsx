@@ -1,6 +1,9 @@
 import { useCallback, useRef, useEffect } from "preact/hooks";
 import { useVideoElement } from "./useVideoElement";
 import { useInferenceWorker } from "./useInferenceWorker";
+import { useDarkMotionDetector } from "./useDarkMotionDetector";
+import { useFlashLight } from "../../hooks/useFlashLight";
+import { useDetectionBackend } from "../../hooks/useDetectionBackend";
 
 import classes from "../../utils/yolo_classes.json";
 import { renderOverlay } from "@/utils/render-overlay";
@@ -67,6 +70,11 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
     isProcessingRef.current = false;
   }, [deviceId, onMotion, intervalMs]);
 
+  const { flashOnMovement, flashDurationMs } = useDetectionBackend();
+
+  const { isScreenFlashActive, triggerFlash } = useFlashLight(stream, flashOnMovement, flashDurationMs);
+  const { checkFrame: checkDarkMotion } = useDarkMotionDetector(triggerFlash);
+
   const { postMessage: postInferenceMessage } = useInferenceWorker({
     onModelLoaded: (e) => console.log("Model loaded", e.data),
     onResult: handleInferenceResult,
@@ -111,6 +119,10 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
           }
         }
         
+        if (flashOnMovement) {
+          checkDarkMotion(videoRef.current);
+        }
+
         // Create bitmap from camera
         try {
           const bitmap = await createImageBitmap(videoRef.current);
@@ -154,6 +166,10 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
   }, [startCameraLoop]);
 
   return (
+    <>
+      {isScreenFlashActive && (
+        <div className="fixed inset-0 z-[9999] bg-white w-screen h-screen pointer-events-none" />
+      )}
     <div className="relative flex justify-center items-center mt-4">
       <video
         ref={videoRef}
@@ -162,5 +178,6 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
       />
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
     </div>
+    </>
   );
 };
