@@ -28,7 +28,7 @@
     "idb": "^8.0.3",
     "localforage": "^1.10.0",
     "lucide-react": "^0.575.0",
-    "motion": "^12.35.0",
+    "motion": "^12.35.2",
     "mp4-muxer": "^5.2.2",
     "mp4box": "^2.3.0",
     "onnxruntime-web": "^1.24.3",
