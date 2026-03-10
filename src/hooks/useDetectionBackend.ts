@@ -63,9 +63,9 @@ export const useDetectionBackend = () => {
   const [flashDurationMs, setFlashDurationMs] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.FLASH_DURATION_MS);
-      return saved !== null ? JSON.parse(saved) : 5000;
+      return saved !== null ? JSON.parse(saved) : 3000;
     } catch {
-      return 5000;
+      return 3000;
     }
   });
 
