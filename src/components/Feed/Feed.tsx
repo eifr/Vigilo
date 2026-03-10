@@ -72,8 +72,8 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
 
   const { flashOnMovement, flashDurationMs } = useDetectionBackend();
 
-  const { isScreenFlashActive, triggerFlash } = useFlashLight(stream, flashOnMovement, flashDurationMs);
-  const { checkFrame: checkDarkMotion } = useDarkMotionDetector(triggerFlash);
+  const { isScreenFlashActive, isFlashActive, triggerFlash } = useFlashLight(stream, flashOnMovement, flashDurationMs);
+  const { checkFrame: checkDarkMotion } = useDarkMotionDetector(triggerFlash, isFlashActive);
 
   const { postMessage: postInferenceMessage } = useInferenceWorker({
     onModelLoaded: (e) => console.log("Model loaded", e.data),

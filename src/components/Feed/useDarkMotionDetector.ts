@@ -5,7 +5,7 @@ const DARKNESS_THRESHOLD = 40; // Max average pixel value to be considered "dark
 const MOTION_THRESHOLD = 30; // Min diff for a pixel to count as "changed"
 const MOTION_AREA_PERCENT = 0.05; // 5% of pixels need to change
 
-export const useDarkMotionDetector = (onDarkMotionDetected: () => void) => {
+export const useDarkMotionDetector = (onDarkMotionDetected: () => void, isFlashActive: boolean) => {
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previousFrameDataRef = useRef<Uint8ClampedArray | null>(null);
 
@@ -27,22 +27,25 @@ export const useDarkMotionDetector = (onDarkMotionDetected: () => void) => {
     const imageData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
     const data = imageData.data;
 
-    // Calculate brightness (luma)
-    let totalLuma = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      // rough luminance
-      const luma = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-      totalLuma += luma;
-    }
-    const avgLuma = totalLuma / (CANVAS_SIZE * CANVAS_SIZE);
+    // Calculate brightness (luma) if the flash is NOT active. 
+    // If the flash is active, the frame WILL be bright, but we still want to track motion.
+    if (!isFlashActive) {
+      let totalLuma = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        // rough luminance
+        const luma = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        totalLuma += luma;
+      }
+      const avgLuma = totalLuma / (CANVAS_SIZE * CANVAS_SIZE);
 
-    // If it's bright enough, we don't care about "dark" motion. Reset previous frame.
-    if (avgLuma > DARKNESS_THRESHOLD) {
-      previousFrameDataRef.current = null;
-      return;
+      // If it's naturally bright enough, we don't care about "dark" motion. Reset previous frame.
+      if (avgLuma > DARKNESS_THRESHOLD) {
+        previousFrameDataRef.current = null;
+        return;
+      }
     }
 
-    // It's dark! Check for motion if we have a previous frame
+    // It's dark (or the flash is already keeping it bright)! Check for motion if we have a previous frame
     if (previousFrameDataRef.current) {
       const prevData = previousFrameDataRef.current;
       let changedPixels = 0;
@@ -60,15 +63,13 @@ export const useDarkMotionDetector = (onDarkMotionDetected: () => void) => {
       const totalPixels = CANVAS_SIZE * CANVAS_SIZE;
       if (changedPixels / totalPixels > MOTION_AREA_PERCENT) {
         onDarkMotionDetected();
-        // Clear previous frame so we don't spam
-        previousFrameDataRef.current = null;
-        return;
+        // Do NOT clear the previous frame. We want continuous motion tracking.
       }
     }
 
     // Save current frame for next comparison
     previousFrameDataRef.current = new Uint8ClampedArray(data);
-  }, [onDarkMotionDetected]);
+  }, [onDarkMotionDetected, isFlashActive]);
 
   return { checkFrame };
 };
