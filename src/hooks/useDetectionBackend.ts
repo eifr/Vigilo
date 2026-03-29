@@ -40,8 +40,6 @@ export const useDetectionBackend = () => {
     }
   });
 
-  const [webgpuEnabled, setWebgpuEnabled] = useState(true);
-
   const [trackedObjects, setTrackedObjects] = useState<Record<string, TrackedObject>>(() => {
     try {
       const saved = localStorage.getItem("vigilo-tracked-objects");
@@ -114,8 +112,6 @@ export const useDetectionBackend = () => {
     updateOpencvConfig,
     yoloConfig,
     updateYoloConfig,
-    webgpuEnabled,
-    setWebgpuEnabled,
     trackedObjects,
     toggleTrackedObject,
     addDiscoveredObject,

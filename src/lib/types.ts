@@ -31,7 +31,7 @@ export interface BoundingBox {
 // Worker Messages
 export type WorkerMessage =
   | { type: "INIT_OPENCV"; config: OpenCVConfig }
-  | { type: "INIT_YOLO"; config: YOLOConfig; webgpuEnabled: boolean }
+  | { type: "INIT_YOLO"; config: YOLOConfig }
   | { type: "UPDATE_CONFIG_OPENCV"; config: OpenCVConfig }
   | { type: "UPDATE_CONFIG_YOLO"; config: YOLOConfig }
   | { type: "PROCESS_FRAME"; imageData?: ImageData; imageBitmap?: ImageBitmap; timestamp: number }

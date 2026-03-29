@@ -37,7 +37,7 @@ export const CameraMotionDetector = ({
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>("idle");
   const [currentBoxes, setCurrentBoxes] = useState<BoundingBox[]>([]);
 
-  const { mode, opencvConfig, yoloConfig, webgpuEnabled } = useDetectionBackend();
+  const { mode, opencvConfig, yoloConfig } = useDetectionBackend();
   const isProcessingRef = useRef(false);
 
   // Store callbacks in refs to avoid re-triggering effects
@@ -138,7 +138,7 @@ export const CameraMotionDetector = ({
     if (mode === "opencv") {
       worker.postMessage({ type: "INIT_OPENCV", config: opencvConfig } as WorkerMessage);
     } else {
-      worker.postMessage({ type: "INIT_YOLO", config: yoloConfig, webgpuEnabled } as WorkerMessage);
+      worker.postMessage({ type: "INIT_YOLO", config: yoloConfig } as WorkerMessage);
     }
 
     const startCamera = async () => {
@@ -306,7 +306,7 @@ export const CameraMotionDetector = ({
     drawDetections(ctx, currentBoxes, mode);
   }, [currentBoxes, hidePreview, mode]);
 
-  // const showLoading = loadingPhase !== "ready" && loadingPhase !== "idle";
+  const showLoading = loadingPhase !== "ready" && loadingPhase !== "idle" && loadingPhase !== "error";
   // const BackendIcon = mode === "yolo" ? Zap : Cpu;
 
   return (
@@ -334,19 +334,21 @@ export const CameraMotionDetector = ({
         {/* <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm rounded-full p-1 z-10"> */}
         {/*   <BackendIcon className="w-4 h-4" /> */}
         {/* </div> */}
-        {/**/}
-        {/* {showLoading && ( */}
-        {/*   <div className="w-full h-full absolute inset-0 bg-background/90 backdrop-blur-sm rounded-md flex flex-col items-center justify-center z-20"> */}
-        {/*     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div> */}
-        {/*     <div className="text-sm font-medium text-foreground mb-1"> */}
-        {/*       {loadingPhase === 'loading-worker' ? `Loading ${mode.toUpperCase()} Engine...` : 'Accessing Camera...'} */}
-        {/*     </div> */}
-        {/*     {mode === 'yolo' && loadingPhase === 'loading-worker' && ( */}
-        {/*       <div className="text-xs text-muted-foreground">Downloading AI Model on first run</div> */}
-        {/*     )} */}
-        {/*   </div> */}
-        {/* )} */}
-        {/**/}
+        
+        {showLoading && (
+          <div className="w-full h-full absolute inset-0 bg-background/90 backdrop-blur-sm rounded-md flex flex-col items-center justify-center z-20 min-h-[300px]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+            <div className="text-sm font-medium text-foreground mb-1">
+              {loadingPhase === 'loading-worker' ? `Loading ${mode.toUpperCase()} Engine...` : 'Accessing Camera...'}
+            </div>
+            {mode === 'yolo' && loadingPhase === 'loading-worker' && (
+              <div className="text-xs text-muted-foreground text-center px-4 mt-2">
+                First load may take a moment while downloading the model.
+              </div>
+            )}
+          </div>
+        )}
+        
         {/* {cameraError && loadingPhase === 'error' && ( */}
         {/*   <div className="absolute inset-0 bg-background/90 backdrop-blur-sm rounded-md flex flex-col items-center justify-center z-30 p-4"> */}
         {/*     <div className="text-destructive text-center mb-3"> */}

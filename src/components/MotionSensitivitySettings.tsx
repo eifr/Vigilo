@@ -1,8 +1,10 @@
+import { Info } from "lucide-react";
 import { useDetectionBackend } from "../hooks/useDetectionBackend";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function MotionSensitivitySettings({
   intervalMs,
@@ -18,8 +20,6 @@ export function MotionSensitivitySettings({
     updateOpencvConfig,
     yoloConfig,
     updateYoloConfig,
-    webgpuEnabled,
-    setWebgpuEnabled,
     trackedObjects,
     toggleTrackedObject,
     flashOnMovement,
@@ -97,16 +97,32 @@ export function MotionSensitivitySettings({
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Smart Object Settings</h4>
             <div className="flex items-center justify-between">
-              <Label htmlFor="webgpu-toggle" className="flex flex-col space-y-1">
-                <span>WebGPU Acceleration</span>
-                <span className="font-normal text-xs text-muted-foreground">
+              <div className="flex flex-col space-y-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="webgpu-toggle">WebGPU Acceleration</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-4 h-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[250px] z-50">
+                      <p>
+                        WebGPU is significantly faster on modern hardware. Use WASM for older
+                        devices or if you experience crashes.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Label
+                  htmlFor="webgpu-toggle"
+                  className="font-normal text-xs text-muted-foreground"
+                >
                   Faster inference if supported by your browser.
-                </span>
-              </Label>
+                </Label>
+              </div>
               <Switch
                 id="webgpu-toggle"
-                checked={webgpuEnabled}
-                onCheckedChange={setWebgpuEnabled}
+                checked={yoloConfig.backend === "webgpu"}
+                onCheckedChange={(c) => updateYoloConfig({ backend: c ? "webgpu" : "wasm" })}
               />
             </div>
 
@@ -172,7 +188,7 @@ export function MotionSensitivitySettings({
               onCheckedChange={setFlashOnMovement}
             />
           </div>
-          
+
           {flashOnMovement && (
             <div className="space-y-2 mt-2">
               <div className="flex justify-between">
@@ -182,7 +198,9 @@ export function MotionSensitivitySettings({
               <Input
                 type="range"
                 value={flashDurationMs / 1000}
-                onInput={(e) => setFlashDurationMs(parseInt((e.target as HTMLInputElement).value, 10) * 1000)}
+                onInput={(e) =>
+                  setFlashDurationMs(parseInt((e.target as HTMLInputElement).value, 10) * 1000)
+                }
                 max={15}
                 min={1}
                 step={1}

@@ -28,7 +28,6 @@ export interface WorkerMessage {
   imageData?: ImageData;
   imageBitmap?: ImageBitmap;
   timestamp?: number;
-  webgpuEnabled?: boolean; // Legacy support
 }
 
 export interface WorkerResponse {

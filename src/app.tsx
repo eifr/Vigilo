@@ -11,6 +11,7 @@ import { useTheme } from "./hooks/useTheme";
 import logo from "./assets/logo.svg";
 import { Eye, EyeOff, Sun, Moon, Activity, CheckCircle, AlertCircle } from "lucide-react";
 import { TrackedObjectsList } from "./components/TrackedObjectsList";
+import { InferenceTest } from "./components/InferenceTest";
 import {
   MOTION_ACTIVE_DURATION_MS,
   DEFAULT_INTERVAL_MS,
@@ -237,6 +238,14 @@ export function App() {
               intervalMs={intervalMs}
             />
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <InferenceTest />
         </motion.div>
       </main>
 

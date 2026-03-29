@@ -7,11 +7,11 @@ let offscreenCanvas: OffscreenCanvas | null = null;
 let offscreenCtx: OffscreenCanvasRenderingContext2D | null = null;
 
 // Initialize Pipeline
-async function init(config: YOLOConfig, webgpuEnabled: boolean) {
+async function init(config: YOLOConfig) {
   try {
     console.log("Worker: Initializing Inference Pipeline...");
     pipeline = new InferencePipeline(config);
-    await pipeline.init(webgpuEnabled);
+    await pipeline.init();
 
     self.postMessage({
       type: "INITIALIZED",
@@ -110,7 +110,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         }
       }
 
-      await init(mergedConfig, msg.webgpuEnabled ?? true);
+      await init(mergedConfig);
       break;
 
     case "PROCESS_FRAME":

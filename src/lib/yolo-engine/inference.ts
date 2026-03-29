@@ -15,7 +15,7 @@ export class InferencePipeline {
     this.config = config;
   }
 
-  async init(webgpuEnabled: boolean = true) {
+  async init() {
     if (this.session) return;
 
     // Initialize OpenCV
@@ -29,11 +29,6 @@ export class InferencePipeline {
 
     // Use config backend or fallback logic
     let backend: "webgpu" | "wasm" | "cpu" = this.config.backend || "webgpu";
-
-    // Override if webgpuEnabled matches legacy flag
-    if (!webgpuEnabled && backend === "webgpu") {
-      backend = "wasm";
-    }
 
     if (backend === "webgpu") {
       const nav = navigator as any;

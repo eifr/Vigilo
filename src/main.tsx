@@ -1,8 +1,14 @@
 import { render } from "preact";
 import "./index.css";
 import { App } from "./app.tsx";
+import { RootLayout } from "./root.tsx";
 
-render(<App />, document.getElementById("app")!);
+render(
+  <RootLayout>
+    <App />
+  </RootLayout>,
+  document.getElementById("app")!,
+);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   const registerServiceWorker = async () => {

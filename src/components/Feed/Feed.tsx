@@ -1,4 +1,5 @@
-import { useCallback, useRef, useEffect } from "preact/hooks";
+import { useCallback, useRef, useEffect, useState } from "preact/hooks";
+import { Loader2 } from "lucide-react";
 import { useVideoElement } from "./useVideoElement";
 import { useInferenceWorker } from "./useInferenceWorker";
 import { useDarkMotionDetector } from "./useDarkMotionDetector";
@@ -37,6 +38,9 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
   const lastMotionTimeRef = useRef<number>(0);
   const lastFrameCaptureTimeRef = useRef<number>(0);
 
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const { flashOnMovement, flashDurationMs, yoloConfig } = useDetectionBackend();
+
   const handleInferenceResult = useCallback((data: any) => {
     // Determine context for drawing
     const overlayCtx = canvasRef.current?.getContext("2d");
@@ -70,20 +74,27 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
     isProcessingRef.current = false;
   }, [deviceId, onMotion, intervalMs]);
 
-  const { flashOnMovement, flashDurationMs } = useDetectionBackend();
-
   const { isScreenFlashActive, isFlashActive, triggerFlash } = useFlashLight(stream, flashOnMovement, flashDurationMs);
   const { checkFrame: checkDarkMotion } = useDarkMotionDetector(triggerFlash, isFlashActive);
 
+  const handleModelLoaded = useCallback((e: any) => {
+    console.log("Model loaded", e.data);
+    setIsModelLoaded(true);
+  }, []);
+
   const { postMessage: postInferenceMessage } = useInferenceWorker({
-    onModelLoaded: (e) => console.log("Model loaded", e.data),
+    onModelLoaded: handleModelLoaded,
     onResult: handleInferenceResult,
   });
 
   const loadModel = useCallback(async () => {
+    setIsModelLoaded(false);
     const modelPath = `${window.location.href}models/${modelConfigRef.current.model}-${modelConfigRef.current.task}.onnx`;
 
     modelConfigRef.current.modelPath = modelPath;
+    modelConfigRef.current.backend = yoloConfig.backend || "webgpu";
+    modelConfigRef.current.scoreThreshold = yoloConfig.confidenceThreshold || 0.45;
+    modelConfigRef.current.iouThreshold = yoloConfig.iouThreshold || 0.45;
 
     postInferenceMessage(
       {
@@ -92,7 +103,7 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
       },
       [],
     );
-  }, [postInferenceMessage]);
+  }, [postInferenceMessage, yoloConfig]);
   // Initial load
   useEffect(() => {
     loadModel();
@@ -170,7 +181,16 @@ export const Feed = ({ stream, deviceId, onMotion, onLatestFrame, intervalMs }: 
       {isScreenFlashActive && (
         <div className="fixed inset-0 z-[9999] bg-white w-screen h-screen pointer-events-none" />
       )}
-    <div className="relative flex justify-center items-center mt-4">
+    <div className="relative flex justify-center items-center mt-4 min-h-[300px] bg-black/5 dark:bg-white/5 rounded-lg">
+      {!isModelLoaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-background/80 backdrop-blur-sm rounded-lg">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+          <p className="text-sm font-medium">Loading AI Model...</p>
+          <p className="text-xs text-muted-foreground mt-1 text-center max-w-[80%]">
+            First load may take a moment while downloading the model.
+          </p>
+        </div>
+      )}
       <video
         ref={videoRef}
         style={{ borderRadius: 8 }}
